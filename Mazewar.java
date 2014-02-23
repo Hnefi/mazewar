@@ -59,6 +59,11 @@ public class Mazewar extends JFrame {
          */
         private Maze maze = null;
 
+        /** 
+         * The {@link ClientServerArbiter} that the game uses
+         */
+        private ClientServerArbiter arbiter = null;
+
         /**
          * The {@link GUIClient} for the game.
          */
@@ -141,7 +146,9 @@ public class Mazewar extends JFrame {
                 
                 // You may want to put your network initialization code somewhere in
                 // here.
-                
+                arbiter = new ClientServerArbiter(); //establish a connection to the server
+                maze.addArbiter(arbiter);
+ 
                 // Create the GUIClient and connect it to the KeyListener queue
                 guiClient = new GUIClient(name);
                 maze.addClient(guiClient);

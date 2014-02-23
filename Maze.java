@@ -116,4 +116,8 @@ public abstract class Maze {
      */
     public abstract void removeMazeListener(MazeListener ml);
     
+
+    /* Arbiter functionality ***********************************************/
+    public abstract void addArbiter(ClientServerArbiter arb);
+    public abstract void removeArbiter();
 }

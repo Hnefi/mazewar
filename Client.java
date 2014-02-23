@@ -50,7 +50,31 @@ public abstract class Client {
                 assert(maze != null);
                 this.maze = null;
         }
+
+         /**
+         * Register this {@link Client} as being connected to the server via
+         * the specified {@link ClientServerArbiter}.  
+         * Naturally a {@link Client} cannot be registered with
+         * more than one {@link ClientServerArbiter} at a time.
+         * @param arb The {@link ClientServerArbiter} which connects the 
+         * {@link Client} to the server.
+         */
+        public void registerArbiter(ClientServerArbiter arb) {
+                assert(arb != null);
+                assert(this.arbiter == null);
+                this.arbiter = arb;
+        }       
         
+        /**
+         * Inform the {@link Client} that the server connection via {@link ClientServerArbiter}
+         * is closed.  The {@link Client} must already be registered
+         * with a {@link Maze} before this can be called.
+         */
+        public void unregisterArbiter() {
+                assert(this.arbiter != null);
+                this.arbiter = null;
+        }
+
         /**
          * Get the name of this {@link Client}.
          * @return A {@link String} naming the {@link Client}.
@@ -103,6 +127,12 @@ public abstract class Client {
          * presently in a maze.
          */
         protected Maze maze = null;
+
+
+        /**
+         * The arbiter for governing communication with the game sever
+         */
+        protected ClientServerArbiter arbiter = null;
 
         /**
          * Maintain a set of listeners.

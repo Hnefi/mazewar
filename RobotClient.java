@@ -93,20 +93,22 @@ public class RobotClient extends LocalClient implements Runnable {
          */
         public void run() {
                 // Put a spiffy message in the console
+                assert(arbiter != null);
                 Mazewar.consolePrintLn("Robot client \"" + this.getName() + "\" activated.");
 
                 // Loop while we are active
+                int rand = 0;
                 while(active) {
-                        // Try to move forward
-                        if(!forward()) {
-                                // If we fail...
-                                if(randomGen.nextInt(3) == 1) {
-                                        // turn left!
-                                        turnLeft();
-                                } else {
-                                        // or perhaps turn right!
-                                        turnRight();
-                                }
+                        rand = randomGen.nextInt(3);
+                        if (rand == 0){
+                            //go forward!
+                            arbiter.requestLocalClientEvent(this, ClientEvent.moveForward);
+                        } else if(rand == 1) {
+                            // turn left!
+                            arbiter.requestLocalClientEvent(this, ClientEvent.turnLeft);
+                        } else {
+                            // or perhaps turn right!
+                            arbiter.requestLocalClientEvent(this, ClientEvent.turnRight);
                         }
 
                         // Shoot at things once and a while.

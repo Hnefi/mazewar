@@ -192,6 +192,17 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 assert(point != null);
                 return getCellImpl(point);
         }
+
+        public synchronized void addArbiter(ClientServerArbiter arb) {
+                assert(arb != null);
+                assert(this.arbiter == null);
+                this.arbiter = arb; 
+        }
+
+        public synchronized void removeArbiter() {
+                assert(this.arbiter != null);
+                this.arbiter = null;
+        }
         
         public synchronized void addClient(Client client) {
                 assert(client != null);
@@ -204,6 +215,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                         cell = getCellImpl(point);
                 } 
                 addClient(client, point);
+                arbiter.addClient(client);
         }
         
         public synchronized Point getClientPoint(Client client) {
@@ -553,6 +565,11 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 return true; 
         }
        
+        /** 
+         * The arbiter for faciliating connections between clients and the server
+         */
+        private ClientServerArbiter arbiter;
+
         /**
          * The random number generator used by the {@link Maze}.
          */
