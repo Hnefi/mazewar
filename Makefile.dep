@@ -1,3 +1,5 @@
+GameServer.class: GameServer.java
+
 Cell.class : Cell.java
 Cell.class : Direction.java
 Cell.class : Direction.class
@@ -16,6 +18,8 @@ Client.class : Point.java
 Client.class : Point.class
 Client.class : Direction.java
 Client.class : Direction.class
+Client.class : GameServer.class
+Client.class : GameServer.java
 ClientEvent.class : ClientEvent.java
 ClientListener.class : ClientListener.java
 ClientListener.class : MazeListener.java
