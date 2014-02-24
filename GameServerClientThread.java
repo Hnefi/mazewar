@@ -6,15 +6,16 @@ import java.util.concurrent.*;
 public class GameServerClientThread extends Thread {
     private Socket socket = null;
     private String client_addr = null;
-    private final ArrayBlockingQueue event_queue;
+    private final ArrayBlockingQueue<GamePacket> event_queue;
 
-    public GameServerClientThread(Socket socket,ArrayBlockingQueue event_queue) {
+    public GameServerClientThread(Socket socket,ArrayBlockingQueue<GamePacket> event_queue) {
         super("GameServerClientThread");
         this.socket = socket;
         this.client_addr = this.socket.getRemoteSocketAddress().toString();
         System.out.println("Created new Thread to handle client connection with client address: " + this.client_addr);
     }
 
+    @Override
     public void run() {
 
         boolean gotByePacket = false;
@@ -30,12 +31,11 @@ public class GameServerClientThread extends Thread {
                 GamePacket to_queue = new GamePacket();
                 to_queue.type = packetFromClient.type;
                 to_queue.player_name = packetFromClient.player_name;
-                if(packetFromClient.the_murderer != null) {
+                if(packetFromClient.john_doe != null) {
                     // then there was a killer (but not a secret one)
-                    to_queue.the_murderer = packetFromClient.the_murderer;
+                    to_queue.john_doe = packetFromClient.john_doe;
                 } 
                 to_queue.request = packetFromClient.request^true; // inv
-
 
                 enqueue_event(to_queue);
 

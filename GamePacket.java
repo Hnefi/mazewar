@@ -14,11 +14,11 @@ public class GamePacket implements Serializable {
 
     public static final int CLIENT_MOVED_FORWARD = 101;
     public static final int CLIENT_MOVED_BACK = 102;
-    public static final int CLIENT_INVERTED = 103;
+    public static final int CLIENT_INVERT = 103;
     public static final int CLIENT_TURN_L = 104;
     public static final int CLIENT_TURN_R = 105;
     public static final int CLIENT_FIRED = 300;
-    public static final int CLIENT_DIED = 404;
+    public static final int CLIENT_KILLED = 404;
     public static final int CLIENT_SPAWNED = 42;
 
     public static final int CLIENT_JOINED = 202;
@@ -30,8 +30,8 @@ public class GamePacket implements Serializable {
     // identifier for player
 	public String player_name;
 
-    // identifier for MURDERER
-    public String the_murderer = null;
+    // identifier for the dead player
+    public String john_doe = null;
 
     // packet direction
     public boolean request;

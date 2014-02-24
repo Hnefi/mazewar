@@ -1,5 +1,6 @@
 import java.net.*;
 import java.io.*;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
@@ -8,8 +9,12 @@ public class GameServer {
         //String lookup_host = null;
         int lookup_port = -1;
         String my_name = "GameServer";
-        ArrayBlockingQueue eventQ = null;
+        ArrayBlockingQueue<GamePacket> eventQ = null;
         AtomicInteger root_time_counter = new AtomicInteger(0);
+
+        /* Keep a list of all of the sockets that the arbiter thread 
+         * will need to iterate over. */
+        List<Socket> listOfClients = Collections.synchronizedList(new ArrayList<Socket>());
 
         boolean listening = true;
 
@@ -20,7 +25,7 @@ public class GameServer {
             if(args.length == 1) {
                 /* Set our variables, create sockets when the clients connect. */
                 serverSocket = new ServerSocket( (lookup_port = Integer.parseInt(args[0])) );
-                eventQ = new ArrayBlockingQueue(50);
+                eventQ = new ArrayBlockingQueue<GamePacket>(50);
             } else {
                 System.err.println("ERROR: Invalid arguments!");
                 System.exit(-1);
@@ -34,15 +39,17 @@ public class GameServer {
          * that are being sent from clients. Also create a root server thread whose entire job is
          * to remove elements from the event queue and send them to all of the connected clients. */
 
+        new ServerArbiter(root_time_counter,eventQ,listOfClients).start();
+
         while (listening) {
-            new GameServerClientThread(serverSocket.accept(),eventQ);
+            Socket new_client = serverSocket.accept();
+            if ( listOfClients.add(new_client) )
+                new GameServerClientThread(new_client,eventQ).start();
+            else
+                System.err.println("Unable to add new connected client to list of game players!!!!");
+
         }
 
-        /*stock_db.write_db_to_file();
-          lookupOut.close();
-          lookupIn.close();
-          lookupSocket.close();
-          serverSocket.close();*/
         serverSocket.close();
     }
 }
