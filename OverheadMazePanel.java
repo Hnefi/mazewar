@@ -257,6 +257,9 @@ public class OverheadMazePanel extends JPanel implements MazeListener {
                 // Doesn't need to do anything
         }
 
+        public void clientSpawned(Client c, DirectedPoint p) {
+                // Doesn't need to do anything
+        }
         /**
          * Cache the {@link Line2D} objects making up the maze.
          * @param x Initial x coordinate.

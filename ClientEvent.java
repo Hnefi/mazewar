@@ -36,8 +36,7 @@ public class ClientEvent {
         private static final int INVERT = 4;
         private static final int FIRE = 5;
         private static final int KILL = 6;
-        private static final int DIE = 7;
-        private static final int SPAWN = 8;
+        private static final int SPAWN = 7;
  
         /**
          * Default to 0, to be invalid.
@@ -84,5 +83,8 @@ public class ClientEvent {
          */
         public static final ClientEvent fire = new ClientEvent(FIRE);
         
-        
+        /**
+         * Generated when a {@link Client} spawns.
+         */
+        public static final ClientEvent spawn = new ClientEvent(SPAWN);
 }

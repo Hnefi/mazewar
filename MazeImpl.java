@@ -214,10 +214,33 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                         point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
                         cell = getCellImpl(point);
                 } 
-                addClient(client, point);
                 arbiter.addClient(client);
+                addClient(client, point);
         }
         
+        /**
+         * Spawns a {@link Client} into the {@link Maze} at a certain {@link DirectedPoint}.
+         * @param client The {@link Client} to be spawned.
+         * @param dPoint The location and direction the {@link Client} should be placed.
+         * @return <code>true</code> on success, <code>false</code> on failure.
+         */
+        public synchronized boolean spawnClient(Client client, DirectedPoint dPoint) {
+                assert(client != null);
+                assert(dPoint != null);
+                assert(checkBounds(dPoint));
+
+                CellImpl cell = getCellImpl(dPoint);
+                if (cell.getContents() == null){
+                    cell.setContents(client);
+                    clientMap.put(client, dPoint);
+                    update();
+                    notifyClientSpawn(client, dPoint);
+                    return true;
+                } else {
+                    return false;
+                }
+        }
+
         public synchronized Point getClientPoint(Client client) {
                 assert(client != null);
                 Object o = clientMap.get(client);
@@ -429,6 +452,31 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 update();
                 return deadPrj;
         }
+
+        private synchronized Direction getNonWallDirection(Point p){
+            assert(p != null);
+
+            Direction d = Direction.random();
+
+            CellImpl cell = getCellImpl(p);
+            while(cell.isWall(d)) {
+                d = Direction.random();
+            }
+            return d;
+        }
+
+        /**
+         * Internal helper for finding a random spawn point for a {@link Client} in the
+         * {@link Maze} and requesting the spawn from the {@link ClientArbiter}.
+         * @param client The {@link Client} to be spawned.
+         * @param dPoint The {@link DirectedPoint} for the client to spawn at
+         */
+        private synchronized void requestSpawnClient(LocalClient client, DirectedPoint dPoint){
+            assert(client != null);
+            assert(dPoint != null);
+            arbiter.requestLocalClientEvent(client, ClientEvent.spawn, dPoint); 
+        }
+
         /**
          * Internal helper for adding a {@link Client} to the {@link Maze}.
          * @param client The {@link Client} to be added.
@@ -437,17 +485,34 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
         private synchronized void addClient(Client client, Point point) {
                 assert(client != null);
                 assert(checkBounds(point));
-                CellImpl cell = getCellImpl(point);
-                Direction d = Direction.random();
-                while(cell.isWall(d)) {
-                  d = Direction.random();
-                }
-                cell.setContents(client);
-                clientMap.put(client, new DirectedPoint(point, d));
                 client.registerMaze(this);
                 client.addClientListener(this);
+               
+                if (client instanceof LocalClient){ 
+                    requestSpawnClient((LocalClient)client, new DirectedPoint(point, getNonWallDirection(point)));
+                }
+
                 update();
                 notifyClientAdd(client);
+        }  
+
+        /**
+         * Internal helper for finding a random spawn point for a {@link Client} in the
+         * {@link Maze} and requesting the spawn from the {@link ClientArbiter}.
+         * @param client The {@link Client} to be spawned.
+         */
+        private synchronized void requestRandomSpawnClient(LocalClient client){
+            assert(client != null);
+            // Pick a random starting point, and check to see if it is already occupied
+            Point point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
+            CellImpl cell = getCellImpl(point);
+            // Repeat until we find an empty cell
+            while(cell.getContents() != null) {
+                point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
+                cell = getCellImpl(point);
+            }
+            Direction d = getNonWallDirection(point);
+            requestSpawnClient(client, new DirectedPoint(point, d));
         }
         
         /**
@@ -465,21 +530,9 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 Point point = (Point)o;
                 CellImpl cell = getCellImpl(point);
                 cell.setContents(null);
-                // Pick a random starting point, and check to see if it is already occupied
-                point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
-                cell = getCellImpl(point);
-                // Repeat until we find an empty cell
-                while(cell.getContents() != null) {
-                        point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
-                        cell = getCellImpl(point);
+                if (target instanceof LocalClient){
+                    requestRandomSpawnClient((LocalClient)target);
                 }
-                Direction d = Direction.random();
-                while(cell.isWall(d)) {
-                        d = Direction.random();
-                }
-                cell.setContents(target);
-                clientMap.put(target, new DirectedPoint(point, d));
-                update();
                 notifyClientKilled(source, target);
         }
         
@@ -635,6 +688,23 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 } 
         }
         
+        /**
+         * Generate a notification to listeners that a
+         * {@link Client} has spawned at a certain {@link DirectedPoint}.
+         * @param c The {@link Client} that spawned.
+         * @param p The {@link DirectedPoint} that the Client is located at.
+         */
+        private void notifyClientSpawn(Client c, DirectedPoint p) {
+                assert(c != null);
+                Iterator i = listenerSet.iterator();
+                while (i.hasNext()) {
+                        Object o = i.next();
+                        assert(o instanceof MazeListener);
+                        MazeListener ml = (MazeListener)o;
+                        ml.clientSpawned(c, p);
+                } 
+        }
+
         /**
          * Generate a notification to listeners that a 
          * {@link Client} has been removed.

@@ -235,6 +235,10 @@ public class ScoreTableModel implements TableModel, MazeListener {
                 notifyListeners();
         }
 
+        public void clientSpawned(Client client, DirectedPoint dPoint){
+                // Doesn't need to do anything
+        }
+
         private void notifyListeners() {
                 Iterator i = listenerSet.iterator();
                 while (i.hasNext()) {

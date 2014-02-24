@@ -9,7 +9,7 @@ public class ClientArbiter {
     private final Map clientNameMap = new HashMap();
 
     public void requestLocalClientEvent(LocalClient c, ClientEvent ce){
-        requestLocalClientEvent(c, ce, null);
+        requestLocalClientEvent(c, ce, null, null);
     }
 
     public void requestLocalClientEvent(LocalClient c, ClientEvent ce, Client target){
@@ -20,15 +20,35 @@ public class ClientArbiter {
         if (target != null) {
             targetName = target.getName();
         }
-        processEvent(c.getName(), ce, targetName);
+        processEvent(c.getName(), ce, targetName, null);
     }
 
-    public void processEvent(String clientName, ClientEvent ce, String targetName){
+    public void requestLocalClientEvent(LocalClient c, ClientEvent ce, DirectedPoint p){
+        //Sends a request to the server regarding this client
+
+        //Until the server is up, we'll hackily just mirror the request back
+        processEvent(c.getName(), ce, null, p);
+    }
+
+    public void requestLocalClientEvent(LocalClient c, ClientEvent ce, Client target, DirectedPoint p)    {
+        //Sends a request to the server regarding this client
+
+        //Until the server is up, we'll hackily just mirror the request back
+        String targetName = null;
+        if (target != null) {
+            targetName = target.getName();
+        }
+        processEvent(c.getName(), ce, targetName, p);
+    }
+
+    public void processEvent(String clientName, ClientEvent ce, String targetName, DirectedPoint p){
         //Reacts to the response from the server regarding a client
         Object o = clientNameMap.get(clientName);
         assert(o instanceof Client);
         Client c = (Client)o;
-               if (ce == ClientEvent.moveForward){
+        assert(c != null);
+        
+        if        (ce == ClientEvent.moveForward){
             c.forward();
         } else if (ce == ClientEvent.moveBackward){
             c.backup();
@@ -40,6 +60,9 @@ public class ClientArbiter {
             c.invert();
         } else if (ce == ClientEvent.fire) {
             c.fire();
+        } else if (ce == ClientEvent.spawn) {
+            System.out.println("Spawning client " + clientName + " via the arbiter!");
+            c.spawn(p);
         }
     }
 

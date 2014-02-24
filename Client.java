@@ -217,6 +217,22 @@ public abstract class Client {
                         return false;
                 }
         }
+
+        /**
+         * Spawn at a given {@link DirectedPoint} in the {@link Maze}
+         * @return <code>true</code> if spawn was successful, otherwise <code>false</code>.
+         */
+        protected boolean spawn(DirectedPoint p) {
+                assert(maze != null);
+                assert (p != null);
+    
+                if (maze.spawnClient(this, p)){
+                        notifySpawn();
+                        return true;
+                } else {
+                        return false;
+                }
+        }
         
         
         /** 
@@ -259,6 +275,13 @@ public abstract class Client {
          */
         private void notifyFire() {
                 notifyListeners(ClientEvent.fire);       
+        }
+
+        /**
+         * Notify listeners that the client spawned.
+         */
+        private void notifySpawn() {
+                notifyListeners(ClientEvent.spawn);
         }
         
         /**
