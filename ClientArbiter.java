@@ -3,7 +3,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 
-public class ClientServerArbiter {
+public class ClientArbiter {
 
     //Map of client names to Client objects
     private final Map clientNameMap = new HashMap();

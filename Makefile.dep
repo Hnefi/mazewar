@@ -1,12 +1,12 @@
-ClientServerArbiter.class : ClientServerArbiter.java
-Client.class : ClientServerArbiter.java
-Client.class : ClientServerArbiter.class
-MazeImpl.class : ClientServerArbiter.java
-MazeImpl.class : ClientServerArbiter.class
-GUIClient.class : ClientServerArbiter.java
-GUIClient.class : ClientServerArbiter.class
-RobotClient.class : ClientServerArbiter.java
-RobotClient.class : ClientServerArbiter.class
+ClientArbiter.class : ClientArbiter.java
+Client.class : ClientArbiter.java
+Client.class : ClientArbiter.class
+MazeImpl.class : ClientArbiter.java
+MazeImpl.class : ClientArbiter.class
+GUIClient.class : ClientArbiter.java
+GUIClient.class : ClientArbiter.class
+RobotClient.class : ClientArbiter.java
+RobotClient.class : ClientArbiter.class
 
 Cell.class : Cell.java
 Cell.class : Direction.java

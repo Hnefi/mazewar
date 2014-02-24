@@ -193,7 +193,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 return getCellImpl(point);
         }
 
-        public synchronized void addArbiter(ClientServerArbiter arb) {
+        public synchronized void addArbiter(ClientArbiter arb) {
                 assert(arb != null);
                 assert(this.arbiter == null);
                 this.arbiter = arb; 
@@ -568,7 +568,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
         /** 
          * The arbiter for faciliating connections between clients and the server
          */
-        private ClientServerArbiter arbiter;
+        private ClientArbiter arbiter;
 
         /**
          * The random number generator used by the {@link Maze}.

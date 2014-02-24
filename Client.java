@@ -53,20 +53,20 @@ public abstract class Client {
 
          /**
          * Register this {@link Client} as being connected to the server via
-         * the specified {@link ClientServerArbiter}.  
+         * the specified {@link ClientArbiter}.  
          * Naturally a {@link Client} cannot be registered with
-         * more than one {@link ClientServerArbiter} at a time.
-         * @param arb The {@link ClientServerArbiter} which connects the 
+         * more than one {@link ClientArbiter} at a time.
+         * @param arb The {@link ClientArbiter} which connects the 
          * {@link Client} to the server.
          */
-        public void registerArbiter(ClientServerArbiter arb) {
+        public void registerArbiter(ClientArbiter arb) {
                 assert(arb != null);
                 assert(this.arbiter == null);
                 this.arbiter = arb;
         }       
         
         /**
-         * Inform the {@link Client} that the server connection via {@link ClientServerArbiter}
+         * Inform the {@link Client} that the server connection via {@link ClientArbiter}
          * is closed.  The {@link Client} must already be registered
          * with a {@link Maze} before this can be called.
          */
@@ -132,7 +132,7 @@ public abstract class Client {
         /**
          * The arbiter for governing communication with the game sever
          */
-        protected ClientServerArbiter arbiter = null;
+        protected ClientArbiter arbiter = null;
 
         /**
          * Maintain a set of listeners.

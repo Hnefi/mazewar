@@ -118,6 +118,6 @@ public abstract class Maze {
     
 
     /* Arbiter functionality ***********************************************/
-    public abstract void addArbiter(ClientServerArbiter arb);
+    public abstract void addArbiter(ClientArbiter arb);
     public abstract void removeArbiter();
 }
