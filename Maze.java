@@ -66,6 +66,14 @@ public abstract class Maze {
      */
     public abstract boolean spawnClient(Client client, DirectedPoint dpoint);
 
+    /**
+     * Spawn a {@link Client} at a given {@link DirectedPoint} in the {@link Maze}.
+     * @param client {@link Client} to be spawned
+     * @param dpoint {@link DirectedPoint} to place the client
+     * @return <code>false</code> on failure, <code>true</code> on success.
+     */
+    public abstract void killClient(Client source, Client target);
+
     /** 
      * Create a new {@link Projectile} from the specified {@link Client}
      * @param client {@link Client} that is firing.

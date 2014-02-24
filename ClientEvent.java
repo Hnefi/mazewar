@@ -86,5 +86,10 @@ public class ClientEvent {
         /**
          * Generated when a {@link Client} spawns.
          */
+        public static final ClientEvent kill = new ClientEvent(KILL);
+
+        /**
+         * Generated when a {@link Client} spawns.
+         */
         public static final ClientEvent spawn = new ClientEvent(SPAWN);
 }

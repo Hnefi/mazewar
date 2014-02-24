@@ -233,6 +233,17 @@ public abstract class Client {
                         return false;
                 }
         }
+
+        /**
+         * This {@link Client} got a kill!
+         * @param target The {@link Client} which was killed by us.
+         */
+        protected void kill(Client target) {
+            assert(maze != null);
+            assert(target != null);
+            maze.killClient(this, target);
+            notifyKill();
+        }
         
         
         /** 
@@ -283,7 +294,14 @@ public abstract class Client {
         private void notifySpawn() {
                 notifyListeners(ClientEvent.spawn);
         }
-        
+       
+        /**
+         * Notify listeners that the client got a kill
+         */ 
+        private void notifyKill() {
+                notifyListeners(ClientEvent.kill);
+        }
+
         /**
          * Send a the specified {@link ClientEvent} to all registered listeners
          * @param ce Event to be sent.

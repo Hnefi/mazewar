@@ -63,6 +63,14 @@ public class ClientArbiter {
         } else if (ce == ClientEvent.spawn) {
             System.out.println("Spawning client " + clientName + " via the arbiter!");
             c.spawn(p);
+        } else if (ce == ClientEvent.kill) {
+            assert(targetName != null);
+            Object t = clientNameMap.get(targetName);
+            assert(t instanceof Client);
+            System.out.println("Processing client " + clientName + " killing client " + targetName + " on the arbiter!");
+            Client target = (Client)t;
+            assert(target != null);
+            c.kill(target);
         }
     }
 

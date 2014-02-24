@@ -241,6 +241,27 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 }
         }
 
+        /**
+         * Helper for handling the death of a {@link Client} at the hands of another.
+         * @param source The {@link Client} that fired the projectile.
+         * @param target The {@link Client} that was killed.
+         */
+        public synchronized void killClient(Client source, Client target) {
+                assert(source != null);
+                assert(target != null);
+                Mazewar.consolePrintLn(source.getName() + " just vaporized " + 
+                                target.getName());
+                Object o = clientMap.remove(target);
+                assert(o instanceof Point);
+                Point point = (Point)o;
+                CellImpl cell = getCellImpl(point);
+                cell.setContents(null);
+                if (target instanceof LocalClient){
+                    requestRandomSpawnClient((LocalClient)target);
+                }
+                notifyClientKilled(source, target);
+        }
+
         public synchronized Point getClientPoint(Client client) {
                 assert(client != null);
                 Object o = clientMap.get(client);
@@ -297,7 +318,9 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                         // If it is a Client, kill it outright
                         if(contents instanceof Client) {
                                 notifyClientFired(client);
-                                killClient(client, (Client)contents);
+                                if (client instanceof LocalClient){
+                                    requestKillClient((LocalClient)client, (Client)contents);
+                                }
                                 update();
                                 return true; 
                         } else {
@@ -427,7 +450,10 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 if(contents != null) {
                         // If it is a Client, kill it outright
                         if(contents instanceof Client) {
-                                killClient(prj.getOwner(), (Client)contents);
+                                Client source = prj.getOwner();
+                                if (source instanceof LocalClient){
+                                    requestKillClient((LocalClient)source, (Client)contents);
+                                }
                                 cell.setContents(null);
                                 deadPrj.add(prj);
                                 update();
@@ -477,6 +503,11 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
             arbiter.requestLocalClientEvent(client, ClientEvent.spawn, dPoint); 
         }
 
+        private synchronized void requestKillClient(LocalClient source, Client target){
+            assert(source != null);
+            assert(target != null);
+            arbiter.requestLocalClientEvent(source, ClientEvent.kill, target);
+        }
         /**
          * Internal helper for adding a {@link Client} to the {@link Maze}.
          * @param client The {@link Client} to be added.
@@ -513,28 +544,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
             }
             Direction d = getNonWallDirection(point);
             requestSpawnClient(client, new DirectedPoint(point, d));
-        }
-        
-        /**
-         * Internal helper for handling the death of a {@link Client}.
-         * @param source The {@link Client} that fired the projectile.
-         * @param target The {@link Client} that was killed.
-         */
-        private synchronized void killClient(Client source, Client target) {
-                assert(source != null);
-                assert(target != null);
-                Mazewar.consolePrintLn(source.getName() + " just vaporized " + 
-                                target.getName());
-                Object o = clientMap.remove(target);
-                assert(o instanceof Point);
-                Point point = (Point)o;
-                CellImpl cell = getCellImpl(point);
-                cell.setContents(null);
-                if (target instanceof LocalClient){
-                    requestRandomSpawnClient((LocalClient)target);
-                }
-                notifyClientKilled(source, target);
-        }
+        } 
         
         /**
          * Internal helper called when a {@link Client} emits a turnLeft action.
