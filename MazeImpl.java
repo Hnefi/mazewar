@@ -313,6 +313,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 /* Is the point withint the bounds of maze? */
                 assert(checkBounds(newPoint));
                 
+                /* All fires should go through the server, so don't process a point-blank kill here!
                 CellImpl newCell = getCellImpl(newPoint);
                 Object contents = newCell.getContents();
                 if(contents != null) {
@@ -329,13 +330,16 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                                 return false;
                         }
                 }
-                
+                */
                 clientFired.add(client);
                 Projectile prj = new Projectile(client);
                 
                 /* Write the new cell */
-                projectileMap.put(prj, newPoint);
-                newCell.setContents(prj);
+                //projectileMap.put(prj, newPoint);
+
+                //spawn it at the client's current point; it will move once before processing if it killed anyone so you won't shoot yourself
+                projectileMap.put(prj, new DirectedPoint(point, d)); 
+                //newCell.setContents(prj);
                 notifyClientFired(client);
                 update();
                 return true; 
@@ -455,7 +459,9 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                                 if (source instanceof LocalClient){
                                     requestKillClient((LocalClient)source, (Client)contents);
                                 }
-                                cell.setContents(null);
+                                if (cell.getContents() == prj){
+                                    cell.setContents(null);
+                                }
                                 deadPrj.add(prj);
                                 update();
                                 return deadPrj;
@@ -471,8 +477,10 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                         }
                 }
 
-                /* Clear the old cell */
-                cell.setContents(null);
+                /* Clear the old cell as long as it's the projectile */
+                if (cell.getContents() == prj){
+                    cell.setContents(null);
+                }
                 /* Write the new cell */
                 projectileMap.put(prj, newPoint);
                 newCell.setContents(prj);

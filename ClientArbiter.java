@@ -55,6 +55,7 @@ class BufferThread extends Thread {
     private final ConcurrentHashMap<String, ClientInBuffer> inBufMap;
 
     public BufferThread(ArrayBlockingQueue<ClientQueueObject> oBuf, ConcurrentHashMap<String, ClientInBuffer> iBufs){
+        super("BufferThread");
         this.outBuf = oBuf;
         this.inBufMap = iBufs;
         this.start();
@@ -100,6 +101,12 @@ public class ClientArbiter {
         return 42;
     }
 
+    public void waitForEventAndProcess(String clientName){ 
+        ClientInBuffer myInBuffer = inBufferMap.get(clientName);
+        assert(myInBuffer != null);
+        processEvent(myInBuffer.takeFromBuf());
+    }
+
     public void requestLocalClientEvent(LocalClient c, ClientEvent ce){
         requestLocalClientEvent(c, ce, null, null);
     }
@@ -132,9 +139,7 @@ public class ClientArbiter {
         }
 
         //Now wait until your input buffer gets populated and process the event
-        ClientInBuffer myInBuffer = inBufferMap.get(clientName);
-        assert(myInBuffer != null);
-        processEvent(myInBuffer.takeFromBuf());
+        waitForEventAndProcess(clientName);
     }
 
     public void processEvent(ClientQueueObject fromQ){
