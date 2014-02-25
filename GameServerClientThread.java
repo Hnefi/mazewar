@@ -11,8 +11,8 @@ public class GameServerClientThread extends Thread {
     private ConcurrentHashMap<String,SendBuf> map_of_buffers;
 
     public GameServerClientThread(Socket socket,ArrayBlockingQueue<GamePacket> eventQ,
-                                  ArrayBlockingQueue<GamePacket> joinQ,
-                                  ConcurrentHashMap<String,SendBuf>bufMap)
+            ArrayBlockingQueue<GamePacket> joinQ,
+            ConcurrentHashMap<String,SendBuf>bufMap)
     {
         super("GameServerClientThread");
         this.socket = socket;
@@ -26,17 +26,14 @@ public class GameServerClientThread extends Thread {
 
     @Override
     public void run() {
-
-        boolean gotByePacket = false;
-
         try {
             /* stream to read from client */
+            ObjectOutputStream toClient = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream fromClient = new ObjectInputStream(socket.getInputStream());
-            //ObjectOutputStream toClient = new ObjectOutputStream(socket.getOutputStream());
 
             GamePacket packetFromClient;
 
-            while (( packetFromClient = (GamePacket) fromClient.readObject()) != null && !Thread.currentThread().isInterrupted() ) {
+            while (( packetFromClient = (GamePacket) fromClient.readObject()) != null && isInterrupted() == false ) {
                 /* Special case - first packet that comes in needs to create a sender thread and buffer
                  * for that sender. */
                 if (packetFromClient.type == GamePacket.FIRST_CONNECT) {
@@ -67,23 +64,22 @@ public class GameServerClientThread extends Thread {
                 enqueue_event(to_queue);
 
                 /* Sending an BROKER_NULL || BROKER_BYE means quit */
-                if (packetFromClient.type == GamePacket.CLIENT_NULL)
+                if (packetFromClient.type == GamePacket.CLIENT_NULL) {
                     /* if code comes here, there is an error in the packet */
                     System.err.println("ERROR: Null Client* packet!!");
-                System.exit(-1);
-                break;
+                    System.exit(-1);
+                    break;
+                }
             }
             /* cleanup when client exits */
             fromClient.close();
             socket.close();
 
         } catch (IOException e) {
-            System.out.println("IOException in GameServerClientThread "+e.getMessage());
+            System.out.println("IOException in GameServerClientThread "+e.toString());
         } catch (ClassNotFoundException e) {
-            System.out.println("ClassNotFoundException! "+e.getMessage());
+            System.out.println("ClassNotFoundException! "+e.toString());
         }
-        
-
         System.out.println("Thread exiting for client "+client_addr);
     }
 
@@ -94,18 +90,20 @@ public class GameServerClientThread extends Thread {
              * to client join/drop into the JOIN queue. */
             int ptype = p.type;
             if (ptype == GamePacket.LOCATION_REQ ||
-                ptype == GamePacket.LOCATION_RESP ||
-                ptype == GamePacket.REMOTE_LOC ||
-                ptype == GamePacket.ALL_LOC_DONE ||
-                ptype == GamePacket.MAKE_NEW_PLYR) {
-                    this.join_queue.put(p);
-                }
-            else
+                    ptype == GamePacket.LOCATION_RESP ||
+                    ptype == GamePacket.REMOTE_LOC ||
+                    ptype == GamePacket.ALL_LOC_DONE) {
+                System.out.println("Putting object with player name  " + p.player_name + " and type " + p.type + " in join queue.");
+                this.join_queue.put(p);
+                    }
+            else {
+                System.out.println("Putting object with player name " + p.player_name + " and type " + p.type + " in event queue.");
                 this.event_queue.put(p);
+            }
         } catch (InterruptedException e) {
             // if the parent kills this thread, propagate this interrupt
             // up the stream so the run() method can periodically check
-            Thread.currentThread().interrupt();
+            interrupt();
         } catch (Exception x) {
             // other non-interrupt exceptions
             System.err.println("Exception " + x.getMessage() + "thrown when trying to add GamePacket to queue.");

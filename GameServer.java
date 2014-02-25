@@ -11,8 +11,8 @@ public class GameServer {
         String my_name = "GameServer";
         ArrayBlockingQueue<GamePacket> eventQ = null;
         ArrayBlockingQueue<GamePacket> joinQ = null;
-        float lfac = (float)0.75;
-        ConcurrentHashMap<String,SendBuf> map_of_buffers = new ConcurrentHashMap<String,SendBuf>(16,lfac,1);
+        //float lfac = (float)0.75;
+        ConcurrentHashMap<String,SendBuf> map_of_buffers = new ConcurrentHashMap<String,SendBuf>(32);
         AtomicInteger synch_point = null;
 
 
@@ -27,7 +27,7 @@ public class GameServer {
             if(args.length == 1) {
                 /* Set our variables, create sockets when the clients connect. */
                 serverSocket = new ServerSocket( (lookup_port = Integer.parseInt(args[0])) );
-                eventQ = new ArrayBlockingQueue<GamePacket>(200);
+                eventQ = new ArrayBlockingQueue<GamePacket>(50);
                 joinQ = new ArrayBlockingQueue<GamePacket>(10); // smaller because only used for joins/leaves
                 synch_point = new AtomicInteger(0);
             } else {
@@ -44,15 +44,16 @@ public class GameServer {
          * to remove elements from the event queue and send them to all of the connected clients. 
          * ALSO, add the thread whose sole responsibility is to manage the dynamic join/drop protocol
          */
-        
-        new ServerArbiter(root_time_counter,eventQ,joinQ,map_of_buffers,synch_point).start(); /* CHANGE THIS SHIZ LATER */
+       
+        /* Start master server threads */
+        new ServerArbiter(root_time_counter,eventQ,joinQ,map_of_buffers,synch_point).start();
+        new ServerJoinDropThread(joinQ,map_of_buffers,synch_point).start();
 
         while (listening) {
             Socket new_client = serverSocket.accept();
             Thread new_recv_thread = new GameServerClientThread(new_client,eventQ,joinQ,map_of_buffers);
             new_recv_thread.start();
         }
-
         serverSocket.close();
     }
 }

@@ -9,6 +9,8 @@ GameServer.class: ServerArbiter.java
 GameServer.class: ServerArbiter.class
 GameServer.class: ServerJoinDropThread.java
 GameServer.class: ServerJoinDropThread.class
+GameServer.class: ServerTester.java
+GameServer.class: ServerTester.class
 
 GameServerClientThread.class: GameServerClientThread.java
 GameServerClientThread.class: GamePacket.java
@@ -29,6 +31,8 @@ ServerJoinDropThread.class: ServerJoinDropThread.java
 SendBuf.class: SendBuf.java
 
 ServerArbiter.class: ServerArbiter.java
+
+ServerTester.class: ServerTester.java
 
 Cell.class : Cell.java
 Cell.class : Direction.java

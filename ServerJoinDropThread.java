@@ -11,18 +11,16 @@ import java.util.concurrent.atomic.*;
 
 public class ServerJoinDropThread extends Thread {
     // controls which queue that the recvr threads put events in
-    private AtomicInteger which_queue;
     private ArrayBlockingQueue<GamePacket> join_queue;
     private ConcurrentHashMap<String,SendBuf>map_of_buffers;
     private final AtomicInteger synch_point;
 
-    public ServerJoinDropThread(AtomicInteger i,
+    public ServerJoinDropThread(
             ArrayBlockingQueue<GamePacket> joinQ,
             ConcurrentHashMap<String,SendBuf>bufMap,
             AtomicInteger cdl)
     {
         super("ServerJoinDropThread");
-        this.which_queue = i;
         this.join_queue = joinQ;
         this.map_of_buffers = bufMap;
         this.synch_point = cdl;
@@ -56,14 +54,16 @@ public class ServerJoinDropThread extends Thread {
          *  thread.
          */
 
-        while ( !Thread.currentThread().isInterrupted() ) {
+        while ( isInterrupted() == false ) {
             /* As long as the synch point is zero, we sleep on it. The
              * Arbiter thread will wake us up when it's time. */
-            while ( synch_point.get() == 0 ) {
-                try {
-                    synch_point.wait();
-                } catch (InterruptedException x) {
-                    Thread.currentThread().interrupt();
+            synchronized (synch_point) {
+                while ( synch_point.get() == 0 ) {
+                    try {
+                        synch_point.wait();
+                    } catch (InterruptedException x) {
+                        interrupt();
+                    }
                 }
             }
 
@@ -82,13 +82,18 @@ public class ServerJoinDropThread extends Thread {
             System.out.println("New player = " + new_player_name);
 
             /* Step 1 - get location from all existing clients, and
-             * the number of responses that I will need.
+             * the number of responses that I will need. Also forward
+             * this JOIN to all of the connected clients, which will
+             * tell them to make a new local thread.
              */
-            int num_players = map_of_buffers.size();
-            p.type = GamePacket.LOCATION_REQ;
-            p.request = true;
+            GamePacket make_loc_thread = new GamePacket();
+            make_loc_thread.player_name = new_player_name;
+            make_loc_thread.type = GamePacket.CLIENT_JOINED;
+            make_loc_thread.request = true;
+            sendToAll(make_loc_thread);
 
-            sendToAll(p);
+            int num_players = map_of_buffers.size();
+
             /* Track the number of responses and send these packets
              * to the new client */
             int num_resp = 0;
@@ -98,6 +103,7 @@ public class ServerJoinDropThread extends Thread {
                     assert(response.type == GamePacket.LOCATION_RESP);
                     response.type = GamePacket.REMOTE_LOC; 
                     sendToNewClient(new_player_name,response);
+                    num_resp++;
                 } catch (InterruptedException x) {
                     Thread.currentThread().interrupt();
                 }
@@ -115,7 +121,7 @@ public class ServerJoinDropThread extends Thread {
                 GamePacket new_player_loc = join_queue.take(); //block
                 assert(new_player_loc.type == GamePacket.LOCATION_REQ
                         && new_player_loc.player_name == new_player_name);
-                new_player_loc.type = GamePacket.MAKE_NEW_PLYR;
+                new_player_loc.type = GamePacket.CLIENT_SPAWNED;
                 sendToAll(new_player_loc);
             } catch (InterruptedException x) {
                 Thread.currentThread().interrupt();

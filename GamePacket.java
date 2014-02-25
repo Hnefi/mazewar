@@ -16,7 +16,6 @@ public class GamePacket implements Serializable {
     public static final int LOCATION_RESP = 21;
     public static final int REMOTE_LOC = 22;
     public static final int ALL_LOC_DONE = 23;
-    public static final int MAKE_NEW_PLYR = 24;
 
     // these go in the event q
     public static final int FIRST_CONNECT = 100;

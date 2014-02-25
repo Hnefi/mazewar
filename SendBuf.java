@@ -20,6 +20,7 @@ public class SendBuf {
         try {
             to_ret = buf.take(); // blocking
         } catch (InterruptedException x) {
+            System.err.println("Sender thread somehow got InterruptedException when inside takeFromBuf()");
             Thread.currentThread().interrupt(); // propagate
         }
         return to_ret;

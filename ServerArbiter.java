@@ -38,7 +38,7 @@ public class ServerArbiter extends Thread {
          * currently existing send buffers. This wakes the sender threads
          * which then push these packets out to all the connected players
          */
-        while ( !Thread.currentThread().isInterrupted() ) {
+        while ( isInterrupted() == false ) {
             try {
                 GamePacket to_send = event_queue.take(); // blocking
                 to_send.tstamp = time_gen.getAndIncrement();
@@ -48,14 +48,16 @@ public class ServerArbiter extends Thread {
                     join_queue.put(to_send);
                     System.out.println("Saw client join request from new player " + to_send.player_name + " , putting it in the join queue and going to sleep on the barrier.");
                     /* Hand exec to the join/drop thread and block */
-                    synch_point.set(1); 
-                    synch_point.notify();
-                    System.out.println("Handing execution to the join/drop and sleeping....");
-                    while ( synch_point.get() == 1 ) {
-                        try {
-                            synch_point.wait(); // blocks here wait on join
-                        } catch (InterruptedException x) {
-                            Thread.currentThread().interrupt();
+                    synchronized (synch_point) {
+                        synch_point.set(1); 
+                        synch_point.notify();
+                        System.out.println("Handing execution to the join/drop and sleeping....");
+                        while ( synch_point.get() == 1 ) {
+                            try {
+                                synch_point.wait(); // blocks here wait on join
+                            } catch (InterruptedException x) {
+                                interrupt();
+                            }
                         }
                     }
                     System.out.println("ServerArbiter re-woken....");
@@ -70,9 +72,9 @@ public class ServerArbiter extends Thread {
                     i.next().putInBuf(to_send);
                 }
             } catch (InterruptedException x ) {
-                Thread.currentThread().interrupt();
+                interrupt();
             }
-            System.out.println("Server arbiter thread exiting.");
         }
+        System.out.println("Server arbiter thread exiting.");
     }
 }

@@ -19,13 +19,15 @@ public class GameServerSenderThread extends Thread {
 
         try {
             /* stream to write to client */
-            //ObjectInputStream fromClient = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream toClient = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream fromClient = new ObjectInputStream(socket.getInputStream());
 
-            while ( !Thread.currentThread().isInterrupted() ) {
+            while ( isInterrupted()== false ) {
+                System.out.println("Sender trying to take...");
                 GamePacket to_send = my_send_buffer.takeFromBuf();
 
                 /* If we get something, then send that shiz */
+                System.out.println("Sender thread writing GamePacket to player name " + to_send.player_name);
                 toClient.writeObject(to_send);
             }
             /* cleanup when client exits */
