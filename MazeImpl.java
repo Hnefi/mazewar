@@ -284,6 +284,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 Point point = (Point)o;
                 CellImpl cell = getCellImpl(point);
                 cell.setContents(null);
+                arbiter.removeClient(client);
                 clientMap.remove(client);
                 client.unregisterMaze();
                 client.removeClientListener(this);

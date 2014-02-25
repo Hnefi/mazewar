@@ -52,7 +52,7 @@ public class Mazewar extends JFrame {
          * All implementations of the same protocol must use 
          * the same seed value, or your mazes will be different.
          */
-        private final int mazeSeed = 42;
+        private final int mazeSeed;
 
         /**
          * The {@link Maze} that the game uses.
@@ -128,9 +128,15 @@ public class Mazewar extends JFrame {
                 super("ECE419 Mazewar");
                 consolePrintLn("ECE419 Mazewar started!");
                 
+                // You may want to put your network initialization code somewhere in
+                // here.
+                arbiter = new ClientArbiter(); //establish a connection to the server
+                mazeSeed = arbiter.getSeed(); //blocks until the server sends which seed to use
+    
                 // Create the maze
                 maze = new MazeImpl(new Point(mazeWidth, mazeHeight), mazeSeed);
                 assert(maze != null);
+                maze.addArbiter(arbiter);
                 
                 // Have the ScoreTableModel listen to the maze to find
                 // out how to adjust scores.
@@ -143,12 +149,7 @@ public class Mazewar extends JFrame {
                 if((name == null) || (name.length() == 0)) {
                   Mazewar.quit();
                 }
-                
-                // You may want to put your network initialization code somewhere in
-                // here.
-                arbiter = new ClientArbiter(); //establish a connection to the server
-                maze.addArbiter(arbiter);
- 
+                 
                 // Create the GUIClient and connect it to the KeyListener queue
                 guiClient = new GUIClient(name);
                 maze.addClient(guiClient);
