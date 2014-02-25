@@ -10,22 +10,25 @@ public class GameServer {
         int lookup_port = -1;
         String my_name = "GameServer";
         ArrayBlockingQueue<GamePacket> eventQ = null;
-        AtomicInteger root_time_counter = new AtomicInteger(0);
+        ArrayBlockingQueue<GamePacket> joinQ = null;
+        float lfac = (float)0.75;
+        ConcurrentHashMap<String,SendBuf> map_of_buffers = new ConcurrentHashMap<String,SendBuf>(16,lfac,1);
 
-        /* Keep a list of all of the sockets that the arbiter thread 
-         * will need to iterate over. */
-        List<Socket> listOfClients = Collections.synchronizedList(new ArrayList<Socket>());
+
+        AtomicInteger root_time_counter = new AtomicInteger(0);
+        AtomicInteger which_queue = new AtomicInteger(0);
 
         boolean listening = true;
 
         ServerSocket serverSocket = null; // need to create this.
 
-        // Startup protocol. This server should only take the port it is listening on.
+        // Startup protocol. This server takes the port that it is listening on
         try {
             if(args.length == 1) {
                 /* Set our variables, create sockets when the clients connect. */
                 serverSocket = new ServerSocket( (lookup_port = Integer.parseInt(args[0])) );
-                eventQ = new ArrayBlockingQueue<GamePacket>(50);
+                eventQ = new ArrayBlockingQueue<GamePacket>(200);
+                joinQ = new ArrayBlockingQueue<GamePacket>(10); // smaller because only used for joins/leaves
             } else {
                 System.err.println("ERROR: Invalid arguments!");
                 System.exit(-1);
@@ -39,15 +42,12 @@ public class GameServer {
          * that are being sent from clients. Also create a root server thread whose entire job is
          * to remove elements from the event queue and send them to all of the connected clients. */
 
-        new ServerArbiter(root_time_counter,eventQ,listOfClients).start();
+        /* new ServerArbiter(root_time_counter,eventQ,listOfClients).start(); /* CHANGE THIS SHIZ LATER */
 
         while (listening) {
             Socket new_client = serverSocket.accept();
-            if ( listOfClients.add(new_client) )
-                new GameServerClientThread(new_client,eventQ).start();
-            else
-                System.err.println("Unable to add new connected client to list of game players!!!!");
-
+            Thread new_recv_thread = new GameServerClientThread(new_client,eventQ,joinQ,map_of_buffers,which_queue);
+            new_recv_thread.start();
         }
 
         serverSocket.close();

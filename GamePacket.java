@@ -11,6 +11,7 @@ public class GamePacket implements Serializable {
      */
     public static final int CLIENT_NULL = -1;
 
+    public static final int FIRST_CONNECT = 100;
 
     public static final int CLIENT_MOVED_FORWARD = 101;
     public static final int CLIENT_MOVED_BACK = 102;
@@ -29,6 +30,9 @@ public class GamePacket implements Serializable {
 	
     // identifier for player
 	public String player_name;
+
+    // port this player is listening on
+    public int port = -1;
 
     // identifier for the dead player
     public String john_doe = null;

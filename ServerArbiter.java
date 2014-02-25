@@ -37,11 +37,12 @@ public class ServerArbiter extends Thread {
                  */
                 synchronized(this.list_of_clients) {
                     Iterator<Socket> i = this.list_of_clients.iterator();
-                    ObjectOutputStream toClient;
                     while(i.hasNext()) {
                         try {
-                            toClient = new ObjectOutputStream(i.next().getOutputStream());
+                            System.out.println("Arbiter making output stream.....");
+                            ObjectOutputStream toClient = new ObjectOutputStream(i.next().getOutputStream());
                             to_send.tstamp = time_gen.getAndIncrement();
+                            System.out.println("Arbiter sending.....");
                             toClient.writeObject(to_send);
                         } catch (IOException x) {
                             System.err.println("Couldn't open output stream in ServerArbiter thread: " + x.getMessage());
