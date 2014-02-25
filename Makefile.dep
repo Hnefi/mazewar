@@ -7,6 +7,8 @@ GameServer.class: GamePacket.java
 GameServer.class: GamePacket.class
 GameServer.class: ServerArbiter.java
 GameServer.class: ServerArbiter.class
+GameServer.class: ServerJoinDropThread.java
+GameServer.class: ServerJoinDropThread.class
 
 GameServerClientThread.class: GameServerClientThread.java
 GameServerClientThread.class: GamePacket.java
@@ -21,6 +23,8 @@ GameServerSenderThread.class: GamePacket.java
 GameServerSenderThread.class: GamePacket.class
 GameServerSenderThread.class: SendBuf.java
 GameServerSenderThread.class: SendBuf.class
+
+ServerJoinDropThread.class: ServerJoinDropThread.java
 
 SendBuf.class: SendBuf.java
 

@@ -8,7 +8,7 @@ public class GameServerSenderThread extends Thread {
     private SendBuf my_send_buffer = null;
 
     public GameServerSenderThread(Socket socket,SendBuf myBuffer) {
-        super("GameServerClientThread");
+        super("GameServerSenderThread");
         this.socket = socket;
         this.my_send_buffer = myBuffer;
         System.out.println("Created new sender thread to handle client connection with socket identification: " + socket.toString() );

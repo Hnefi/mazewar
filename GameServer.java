@@ -13,10 +13,10 @@ public class GameServer {
         ArrayBlockingQueue<GamePacket> joinQ = null;
         float lfac = (float)0.75;
         ConcurrentHashMap<String,SendBuf> map_of_buffers = new ConcurrentHashMap<String,SendBuf>(16,lfac,1);
+        AtomicInteger synch_point = null;
 
 
         AtomicInteger root_time_counter = new AtomicInteger(0);
-        AtomicInteger which_queue = new AtomicInteger(0);
 
         boolean listening = true;
 
@@ -29,6 +29,7 @@ public class GameServer {
                 serverSocket = new ServerSocket( (lookup_port = Integer.parseInt(args[0])) );
                 eventQ = new ArrayBlockingQueue<GamePacket>(200);
                 joinQ = new ArrayBlockingQueue<GamePacket>(10); // smaller because only used for joins/leaves
+                synch_point = new AtomicInteger(0);
             } else {
                 System.err.println("ERROR: Invalid arguments!");
                 System.exit(-1);
@@ -40,13 +41,15 @@ public class GameServer {
 
         /* Now that we have the port we are listening on, we need to accept any requests
          * that are being sent from clients. Also create a root server thread whose entire job is
-         * to remove elements from the event queue and send them to all of the connected clients. */
-
-        /* new ServerArbiter(root_time_counter,eventQ,listOfClients).start(); /* CHANGE THIS SHIZ LATER */
+         * to remove elements from the event queue and send them to all of the connected clients. 
+         * ALSO, add the thread whose sole responsibility is to manage the dynamic join/drop protocol
+         */
+        
+        new ServerArbiter(root_time_counter,eventQ,joinQ,map_of_buffers,synch_point).start(); /* CHANGE THIS SHIZ LATER */
 
         while (listening) {
             Socket new_client = serverSocket.accept();
-            Thread new_recv_thread = new GameServerClientThread(new_client,eventQ,joinQ,map_of_buffers,which_queue);
+            Thread new_recv_thread = new GameServerClientThread(new_client,eventQ,joinQ,map_of_buffers);
             new_recv_thread.start();
         }
 

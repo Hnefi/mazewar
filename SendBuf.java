@@ -24,4 +24,12 @@ public class SendBuf {
         }
         return to_ret;
     }
+
+    public void putInBuf(GamePacket to_buf) {
+        try {
+            buf.put(to_buf); // blocking
+        } catch (InterruptedException x) {
+            Thread.currentThread().interrupt(); // propagate
+        }
+    }
 }

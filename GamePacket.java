@@ -11,8 +11,15 @@ public class GamePacket implements Serializable {
      */
     public static final int CLIENT_NULL = -1;
 
-    public static final int FIRST_CONNECT = 100;
+    // these go in the join q
+    public static final int LOCATION_REQ = 20;
+    public static final int LOCATION_RESP = 21;
+    public static final int REMOTE_LOC = 22;
+    public static final int ALL_LOC_DONE = 23;
+    public static final int MAKE_NEW_PLYR = 24;
 
+    // these go in the event q
+    public static final int FIRST_CONNECT = 100;
     public static final int CLIENT_MOVED_FORWARD = 101;
     public static final int CLIENT_MOVED_BACK = 102;
     public static final int CLIENT_INVERT = 103;
@@ -46,5 +53,6 @@ public class GamePacket implements Serializable {
     // spawn point (NO FRIGGIN CAMPING)
     public Point you_are_here = null;
     public Direction i_want_it_that_way = null;
+    public DirectedPoint location = null;
 
 }

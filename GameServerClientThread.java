@@ -8,20 +8,18 @@ public class GameServerClientThread extends Thread {
     private String client_addr = null;
     private ArrayBlockingQueue<GamePacket> event_queue;
     private ArrayBlockingQueue<GamePacket> join_queue;
-    private ConcurrentHashMap<String,SendBuf>map_of_buffers;
-    private AtomicInteger which_queue;
+    private ConcurrentHashMap<String,SendBuf> map_of_buffers;
 
     public GameServerClientThread(Socket socket,ArrayBlockingQueue<GamePacket> eventQ,
                                   ArrayBlockingQueue<GamePacket> joinQ,
-                                  ConcurrentHashMap<String,SendBuf>bufMap,
-                                  AtomicInteger i) {
+                                  ConcurrentHashMap<String,SendBuf>bufMap)
+    {
         super("GameServerClientThread");
         this.socket = socket;
         this.client_addr = this.socket.getRemoteSocketAddress().toString();
         this.event_queue = eventQ;
         this.join_queue = joinQ;
         this.map_of_buffers = bufMap;
-        this.which_queue = i;
         System.out.println("Created new Thread to handle client connection with client address: " + this.client_addr);
     }
 
@@ -52,6 +50,7 @@ public class GameServerClientThread extends Thread {
                     map_of_buffers.putIfAbsent(packetFromClient.player_name,new_send_buf);
                     // Start sender thread.
                     new_sender_thread.start();
+                    continue;
                 }
 
                 /* Otherwise, simply process the event message and enqueue it. */
@@ -91,10 +90,18 @@ public class GameServerClientThread extends Thread {
     private void enqueue_event(GamePacket p) {
         /* Goes into the blocking queue and places this event in it. */
         try {
-            if( which_queue.get() == 0 ) /* If the which_queue AtomicInteger is 0, put into the event q */
-                this.event_queue.put(p);
+            /* Checks for certain packet types. Put anything pertaining
+             * to client join/drop into the JOIN queue. */
+            int ptype = p.type;
+            if (ptype == GamePacket.LOCATION_REQ ||
+                ptype == GamePacket.LOCATION_RESP ||
+                ptype == GamePacket.REMOTE_LOC ||
+                ptype == GamePacket.ALL_LOC_DONE ||
+                ptype == GamePacket.MAKE_NEW_PLYR) {
+                    this.join_queue.put(p);
+                }
             else
-                this.join_queue.put(p);
+                this.event_queue.put(p);
         } catch (InterruptedException e) {
             // if the parent kills this thread, propagate this interrupt
             // up the stream so the run() method can periodically check
