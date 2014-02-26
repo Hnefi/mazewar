@@ -5,17 +5,25 @@ import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
+import java.io.IOException;
+
 class ClientQueueObject {
     public final ClientEvent eventType;
     public final String clientName;
     public final String targetName;
     public final DirectedPoint dPoint;
+    public final Integer seed;
 
-    public ClientQueueObject(ClientEvent eType, String cName, String tName, DirectedPoint p){
+    public ClientQueueObject(ClientEvent eType, String cName, String tName, DirectedPoint p, Integer s){
         this.eventType = eType;
         this.clientName = cName;
         this.targetName = tName;
         this.dPoint = p;
+        this.seed = s;
     }
 }
 
@@ -81,17 +89,46 @@ class OutBufferThread extends Thread {
     private final ClientBufferQueue outBuf;
 
     //TODO: Replace this with an open socket to the server
-    private final ClientSocketQueue socket;
+    private final Socket socket;
+    private final String cName;
+    private final int port;
 
-    public OutBufferThread(ClientBufferQueue oBuf, ClientSocketQueue socketProxy){
+    public OutBufferThread(ClientBufferQueue oBuf, String clientName, Socket s, int myPort){
         super("OutBufferThread");
         this.outBuf = oBuf;
-        this.socket = socketProxy;
+        this.socket = s;
+        this.cName = clientName;
+        this.port = myPort;
         this.start();
     }
 
     @Override
     public void run() {
+        /* Open sockets */
+
+        ObjectOutputStream toServ = null;
+        ObjectInputStream fromServ = null;
+        try {
+            toServ = new ObjectOutputStream(socket.getOutputStream());
+            fromServ = new ObjectInputStream(socket.getInputStream());
+        } catch (IOException x) {
+            System.err.println("Sender couldn't open streams.");
+        }
+
+        System.out.println("Sender trying to write FCON.");
+
+        /* Send a FIRST_CONNECT so that the receiver thread can open its communication. */
+        GamePacket fcon = new GamePacket();
+        fcon.type = GamePacket.FIRST_CONNECT;
+        fcon.port = port;
+        fcon.player_name = cName;
+        try {
+            toServ.writeObject(fcon);
+        } catch (IOException x) {
+            System.err.println("Sender couldn't write FCON.");
+        }
+        System.out.println("Sender thread wrote FCON packet.");
+
         while (true){
             ClientQueueObject messageToServer = this.outBuf.takeFromBuf();
             assert(messageToServer != null);
@@ -99,26 +136,24 @@ class OutBufferThread extends Thread {
             //TODO: Format the ClientQueueObject as a GamePacket for the server
             //TODO: Replace this with a socket put
             GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
-
-            this.socket.insertToBuf(packetToServer);
-
-            //Until we actually connect to the server, fake it to look like we've received all other locations.
-            if (messageToServer.eventType == ClientEvent.join){
-                ClientQueueObject doneObject = new ClientQueueObject(ClientEvent.locationComplete, messageToServer.clientName, null, null);
-                this.socket.insertToBuf(ClientArbiter.getPacketFromClientQ(doneObject));
+            try {
+                toServ.writeObject(packetToServer);
+            } catch (IOException x) {
+                System.err.println("Sender couldn't write FCON.");
             }
+            System.out.println("Sender thread wrote FCON packet.");
         }
     }
 }
 
 class InBufferThread extends Thread {
-    private final ClientSocketQueue socket;
+    private final ServerSocket socketListener;
     private final ConcurrentHashMap<String, ClientBufferQueue> inBufMap;
     private final ClientArbiter arbiter;
 
-    public InBufferThread(ClientSocketQueue socketProxy, ConcurrentHashMap<String, ClientBufferQueue> iBufs, ClientArbiter arb){
+    public InBufferThread(ServerSocket ss, ConcurrentHashMap<String, ClientBufferQueue> iBufs, ClientArbiter arb){
         super("InBufferThread");
-        this.socket = socketProxy;
+        this.socketListener = ss;
         this.inBufMap = iBufs;
         this.arbiter = arb;
         this.start();
@@ -126,12 +161,52 @@ class InBufferThread extends Thread {
 
     @Override
     public void run() {
+        //First wait for the server to initiate a connection
+        Socket my_sock = null;
+        try {
+            my_sock = socketListener.accept();
+        } catch (IOException consumed) {
+            System.err.println("Receiver couldn't open socket.");
+        }
+
+        System.out.println("Receiver thread got new socket.");
+
+        //Now establish Object streams to/from the server
+        ObjectOutputStream toServ = null;
+        ObjectInputStream fromServ = null;
+        try {
+            toServ = new ObjectOutputStream(my_sock.getOutputStream());
+            fromServ = new ObjectInputStream(my_sock.getInputStream());
+        } catch (IOException x) {
+            System.err.println("Receiver couldn't open input stream with message: " + x.getMessage());
+        }
+        System.out.println("Receiver thread got new Input stream successfully.");
+
+        //Main Loop
         while (!Thread.currentThread().isInterrupted()){
-            GamePacket packetFromServer = this.socket.takeFromBuf();
+            //Get a packet from the server
+            GamePacket packetFromServer = null;
+            try {
+                packetFromServer = (GamePacket) fromServ.readObject();
+                System.out.println("Receiver got packet with player name: " + packetFromServer.player_name + "type: " + packetFromServer.type);
+            } catch (IOException x) {
+                System.err.println("Receiver missed reading packet!!");
+                continue;
+            } catch (ClassNotFoundException cnf) {
+                System.err.println("Object doesn't match GamePacket.");
+                continue;
+            }
+            assert(packetFromServer != null);
+
+            //Convert it to a Client-friendly message
             ClientQueueObject messageFromServer = ClientArbiter.getClientQFromPacket(packetFromServer);
             assert(messageFromServer != null);
 
             String clientName = messageFromServer.clientName;
+            if (clientName == null && packetFromServer.type == SET_RAND_SEED){
+                //must be meant for the arbiter!
+                clientName = "arbiter";
+            }
 
             //Find the right queue to put the message into
             ClientBufferQueue bufferToClient = this.inBufMap.get(clientName);
@@ -160,14 +235,19 @@ public class ClientArbiter {
 
     private final int OUTBUFFERSIZE = 50;
 
-    private final ClientSocketQueue socketProxy;
+    private final Socket toServerSocket;
+    private final ServerSocket fromServerListener;
+
     private final ClientBufferQueue outBuffer;
     private final ConcurrentHashMap<String, ClientBufferQueue> inBufferMap;
+
+    private final ClientBufferQueue arbiterInBuffer;
+
     private final OutBufferThread outThread;
     private final InBufferThread inThread;
 
     private Maze maze;
-    private final int seed;
+    private int seed;
 
     public ClientArbiter(String myClientName, String serverHost, int serverPort, int myPort){
         clientNameMap = new ConcurrentHashMap<String, Client>();
@@ -176,15 +256,26 @@ public class ClientArbiter {
         outBuffer = new ClientBufferQueue("masterOutBuffer");
         inBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
 
+        arbiterInBuffer = new ClientBufferQueue("arbiterInBuffer");
+        inBufferMap.put("arbiter", arbiterInBuffer);
+
         //TODO: Open socket protocol; open two sockets to the server (send & receive)
-        socketProxy = new ClientSocketQueue();
-        seed = 42;
+        toServerSocket = new Socket(serverHost, serverPort);
+        fromServerListener = new ServerSocket(myPort);
 
         //TODO: Pass the socket to the buffer threads
-        outThread = new OutBufferThread(outBuffer, socketProxy);
-        inThread = new InBufferThread(socketProxy, inBufferMap, this);
+        outThread = new OutBufferThread(outBuffer, myClientName, toServerSocket, myPort);
+        inThread = new InBufferThread(fromServerListener, inBufferMap, this);
 
+        ClientQueueObject seedMessage = arbiterInBuffer.takeFromBuf();
+        assert(seedMessage.eventType == ClientEvent.setRandomSeed);
+        seed = seedMessage.seed;
+        
         maze = null;
+    }
+
+    public synchronized void setSeed(int s){
+        seed = s;
     }
 
     private static int getPacketTypeFromClientEvent(ClientEvent eType){
@@ -265,6 +356,9 @@ public class ClientArbiter {
             case GamePacket.CLIENT_LEFT:
                 eType = ClientEvent.leave;
                 break;
+            case GamePacket.SET_RAND_SEED:
+                eType = ClientEvent.setRandomSeed;
+                break;
             default:
                 break;
         }
@@ -292,10 +386,10 @@ public class ClientArbiter {
             dPoint = new DirectedPoint(packet.you_are_here, packet.i_want_it_that_way);
         }
 
-        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint));
+        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed));
     }
 
-    public int getSeed(){
+    public synchronized int getSeed(){
         return seed;
     }
 
@@ -364,7 +458,7 @@ public class ClientArbiter {
         assert(dPoint != null);
 
         //write it to the output buffer for the outThread to find
-        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationRequest, clientName, null, dPoint));
+        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationRequest, clientName, null, dPoint, null));
     }
 
     public void createRemoteClientAndSendLocations(String remoteClientName){
@@ -458,7 +552,7 @@ public class ClientArbiter {
         }
 
         //Write the request to the output buffer
-        outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p));
+        outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p, null));
 
         //Record that this thread is currently waiting for a reply
         Long curThreadId = Thread.currentThread().getId();

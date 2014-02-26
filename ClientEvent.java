@@ -47,6 +47,7 @@ public class ClientEvent {
         private static final int LOCATION_RESPONSE = 11;
         private static final int REMOTE_LOCATION = 12;
         private static final int LOCATION_COMPLETE = 13;
+        private static final int SET_RANDOM_SEED = 14;
  
         /**
          * Default to 0, to be invalid.
@@ -132,4 +133,9 @@ public class ClientEvent {
          * Generated when a {@link Client} has received the locations for all other clients.
          */
         public static final ClientEvent locationComplete = new ClientEvent(LOCATION_COMPLETE);
+
+        /** 
+         * Generated when a {@link Client} receives notice of the random seed.
+         */
+        public static final ClientEvent setRandomSeed = new ClientEvent(SET_RANDOM_SEED);
 }
