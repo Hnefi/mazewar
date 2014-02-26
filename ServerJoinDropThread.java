@@ -116,6 +116,7 @@ public class ServerJoinDropThread extends Thread {
             System.out.println("Sending all loc done packet to new client.");
             GamePacket all_loc_comp = new GamePacket();
             all_loc_comp.type = GamePacket.ALL_LOC_DONE;
+            all_loc_comp.player_name = new_player_name;
             sendToNewClient(new_player_name,all_loc_comp);
 
             /* Final step - the new client should give us a packet
