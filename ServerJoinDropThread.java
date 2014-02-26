@@ -121,6 +121,7 @@ public class ServerJoinDropThread extends Thread {
 
             /* Final step - the new client should give us a packet
              * that indicates the location he is to spawn at. */
+            /*
             try {
                 System.out.println("Getting location from the new guy.");
                 GamePacket new_player_loc = join_queue.take(); //block
@@ -133,6 +134,7 @@ public class ServerJoinDropThread extends Thread {
             } catch (InterruptedException x) {
                 Thread.currentThread().interrupt();
             }
+            */
 
             /* Now we are finished adding, so we can tell the 
              * ServerArbiter thread to wake up and go to sleep until
