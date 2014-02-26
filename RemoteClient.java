@@ -23,17 +23,27 @@ USA.
  * @version $Id: RemoteClient.java 342 2004-01-23 21:35:52Z geoffw $
  */
 
-public class RemoteClient extends Client {
-        
+public class RemoteClient extends Client implements Runnable {
+
+        private final ClientArbiter arbiter;        
+
         /**
          * Create a remotely controlled {@link Client}.
          * @param name Name of this {@link RemoteClient}.
          */
-        public RemoteClient(String name) {
+        public RemoteClient(String name, ClientArbiter arb) {
                 super(name);
+                arbiter = arb;
         }
 
         /**
          * May want to fill in code here.
          */ 
+
+        public void run(){
+            assert(arbiter != null);
+            while(true){
+                arbiter.requestServerAction(this);
+            }   
+        }
 }

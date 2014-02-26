@@ -53,15 +53,20 @@ public abstract class Maze {
     /* Client functionality ************************************************/
     
     /** 
-     * Add a {@link Client} at random location in the {@link Maze}. 
+     * Add a {@link Client} to the {@link Maze}. NOTE: Does not spawn the client!!
      * @param client {@link Client} to be added to the {@link Maze}.
      */
     public abstract void addClient(Client client);
 
     /**
+     * Randomly spawn a {@link LocalClient} into the maze.
+     */
+    public abstract void randomSpawnClient(LocalClient client);
+
+    /**
      * Create a new {@link RemoteClient} with the given name.
      */
-    public abstract void createRemoteClient(String remoteName);
+    public abstract RemoteClient createRemoteClient(String remoteName);
 
     /**
      * Spawn a {@link Client} at a given {@link DirectedPoint} in the {@link Maze}.

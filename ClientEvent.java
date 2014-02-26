@@ -29,6 +29,8 @@ public class ClientEvent {
         /**
          * Internal representations of events.
          */
+
+        //Gameplay events
         private static final int MOVE_FORWARD = 0;
         private static final int MOVE_BACKWARD = 1;
         private static final int TURN_LEFT = 2;
@@ -37,8 +39,11 @@ public class ClientEvent {
         private static final int FIRE = 5;
         private static final int KILL = 6;
         private static final int SPAWN = 7;
+
+        //Player join events
         private static final int JOIN = 8;
         private static final int LOC_REQUEST = 9;
+        private static final int LOC_COMPLETE = 10;
  
         /**
          * Default to 0, to be invalid.
@@ -104,4 +109,9 @@ public class ClientEvent {
          * Generated when a {@link Client} reports its location.
          */
         public static final ClientEvent locationRequest = new ClientEvent(LOC_REQUEST);
+        
+        /**
+         * Generated when a {@link Client} has received the locations for all other clients.
+         */
+        public static final ClientEvent locationComplete = new ClientEvent(LOC_COMPLETE);
 }

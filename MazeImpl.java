@@ -204,22 +204,24 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 this.arbiter = null;
         }
 
-        public synchronized void createRemoteClient(String remoteName){
-
+        public synchronized RemoteClient createRemoteClient(String remoteName){
+                RemoteClient rClient = new RemoteClient(remoteName, arbiter);
+                addClient(rClient);
+                Thread rThread = new Thread(rClient);
+                rThread.start();
+                return rClient;
         }
         
         public synchronized void addClient(Client client) {
                 assert(client != null);
-                // Pick a random starting point, and check to see if it is already occupied
-                Point point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
-                CellImpl cell = getCellImpl(point);
-                // Repeat until we find an empty cell
-                while(cell.getContents() != null) {
-                        point = new Point(randomGen.nextInt(maxX),randomGen.nextInt(maxY));
-                        cell = getCellImpl(point);
-                } 
+                client.registerMaze(this);
+                client.addClientListener(this);
                 arbiter.addClient(client);
-                addClient(client, point);
+                notifyClientAdd(client);
+        }
+
+        public synchronized void randomSpawnClient(LocalClient client){
+                requestRandomSpawnClient(client);
         }
         
         /**
@@ -513,6 +515,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
         private synchronized void requestSpawnClient(LocalClient client, DirectedPoint dPoint){
             assert(client != null);
             assert(dPoint != null);
+            assert(checkBounds(dPoint));
             arbiter.requestLocalClientEvent(client, ClientEvent.spawn, dPoint); 
         }
 
@@ -521,24 +524,6 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
             assert(target != null);
             arbiter.requestLocalClientEvent(source, ClientEvent.kill, target);
         }
-        /**
-         * Internal helper for adding a {@link Client} to the {@link Maze}.
-         * @param client The {@link Client} to be added.
-         * @param point The location the {@link Client} should be added.
-         */
-        private synchronized void addClient(Client client, Point point) {
-                assert(client != null);
-                assert(checkBounds(point));
-                client.registerMaze(this);
-                client.addClientListener(this);
-               
-                if (client instanceof LocalClient){ 
-                    requestSpawnClient((LocalClient)client, new DirectedPoint(point, getNonWallDirection(point)));
-                }
-
-                update();
-                notifyClientAdd(client);
-        }  
 
         /**
          * Internal helper for finding a random spawn point for a {@link Client} in the

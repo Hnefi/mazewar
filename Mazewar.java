@@ -154,7 +154,7 @@ public class Mazewar extends JFrame {
                  
                 // Create the GUIClient and connect it to the KeyListener queue
                 guiClient = new GUIClient(name);
-                maze.addClient(guiClient);
+                arbiter.addLocalClientAndLoadRemoteClients(guiClient);
                 this.addKeyListener(guiClient);
                 
                 // Use braces to force constructors not to be called at the beginning of the
@@ -222,13 +222,13 @@ public class Mazewar extends JFrame {
                 this.requestFocusInWindow();
                
                 { 
-                    maze.addClient(new RobotClient("Norby"));
-                    maze.addClient(new RobotClient("Robbie"));
-                    maze.addClient(new RobotClient("Clango"));
-                    maze.addClient(new RobotClient("Marvin"));
-                    maze.addClient(new RobotClient("Blinky"));
-                    maze.addClient(new RobotClient("Prinky"));
-                    maze.addClient(new RobotClient("Shinky"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Norby"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Robbie"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Clango"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Marvin"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Blinky"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Prinky"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Shinky"));
                 }
         }
 

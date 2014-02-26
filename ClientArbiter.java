@@ -70,9 +70,13 @@ class OutBufferThread extends Thread {
             assert(messageToServer != null);
 
             //TODO: Format the ClientQueueObject as a GamePacket for the server
-
             //TODO: Replace this with a socket put
             this.socket.insertToBuf(messageToServer);
+
+            //Until we actually connect to the server, fake it to look like we've received all other locations.
+            if (messageToServer.eventType == ClientEvent.join){
+                this.socket.insertToBuf(new ClientQueueObject(ClientEvent.locationComplete, messageToServer.clientName, null, null));
+            }
         }
     }
 }
@@ -102,16 +106,17 @@ class InBufferThread extends Thread {
             ClientBufferQueue bufferToClient = this.inBufMap.get(clientName);
             
             if(messageFromServer.eventType == ClientEvent.join && bufferToClient == null){
+                System.out.println("InBufferThread creating new RemoteClient names " + clientName);
+                
                 //We've never seen this client before - must be a new remote client!
                 arbiter.createRemoteClientAndSendLocations(clientName);
 
-                //Once the above method returns, the client should be in the map.
-                bufferToClient = this.inBufMap.get(clientName);
-            }
-            assert(bufferToClient != null);
+            } else {
+                assert(bufferToClient != null);
 
-            //now forward the packet to the appropriate client!
-            bufferToClient.insertToBuf(messageFromServer);
+                //now forward the packet to the appropriate client!
+                bufferToClient.insertToBuf(messageFromServer);
+            }
         }
     }
 }
@@ -153,6 +158,53 @@ public class ClientArbiter {
         return 42;
     }
 
+    public void handleRemoteLocationRequest(ClientQueueObject q){
+        assert(q != null);
+        assert(q.eventType == ClientEvent.locationRequest);
+        assert(maze != null);
+
+        String remoteName = q.targetName;
+        DirectedPoint remotePoint = q.dPoint;
+
+        Client existingClient = clientNameMap.get(remoteName);
+        if (existingClient == null){
+            RemoteClient rClient = maze.createRemoteClient(remoteName);
+            maze.spawnClient(rClient, remotePoint); 
+        }
+    }
+
+    public void addLocalClientAndLoadRemoteClients(LocalClient c){
+        //Invoked on a new client machine trying to join an exiting game
+        assert(c != null);
+        assert(c.getName() != null);
+        assert(maze != null);
+
+        //Add the LocalClient in the maze and the arbiter!
+        maze.addClient(c);
+
+        //Send a join packet and block until it comes back
+        requestLocalClientEvent(c, ClientEvent.join); 
+
+        //Now get this client's input buffer
+        ClientBufferQueue myInBuffer = inBufferMap.get(c.getName());
+        //Now wait for the locations of every other player, spawning a new RemoteClient each time
+        ClientQueueObject objectFromServer = null;
+        ClientEvent eventFromServer = null;
+        while(true){
+            objectFromServer = myInBuffer.takeFromBuf();
+            assert(objectFromServer != null);
+            eventFromServer = objectFromServer.eventType;
+            if (eventFromServer == ClientEvent.locationComplete){
+                break;
+            } else if (eventFromServer == ClientEvent.locationRequest){
+                handleRemoteLocationRequest(objectFromServer);
+            }
+        }
+
+        //Finally, spawn the client in the maze!
+        maze.randomSpawnClient(c);
+    }
+
     public void sendClientLocationToServer(LocalClient c){
         String clientName = null;
         if (c != null){
@@ -173,6 +225,8 @@ public class ClientArbiter {
     }
 
     public void createRemoteClientAndSendLocations(String remoteClientName){
+        //Invoked on a pre-exisiting client machine on another machine trying to join
+
         //First create the client
         maze.createRemoteClient(remoteClientName);
 
@@ -236,6 +290,10 @@ public class ClientArbiter {
             ret = "SPAWN";
         } else if (ce == ClientEvent.kill) {
             ret = "KILL";
+        } else if (ce == ClientEvent.join) {
+            ret = "JOIN";
+        } else if (ce == ClientEvent.locationRequest) {
+            ret = "LOCATION_REQUEST";
         }
         return ret;
     }
