@@ -139,9 +139,9 @@ class OutBufferThread extends Thread {
             try {
                 toServ.writeObject(packetToServer);
             } catch (IOException x) {
-                System.err.println("Sender couldn't write FCON.");
+                System.err.println("Sender couldn't write packet.");
             }
-            System.out.println("Sender thread wrote FCON packet.");
+            System.out.println("Sender thread wrote packet.");
         }
     }
 }
@@ -188,7 +188,7 @@ class InBufferThread extends Thread {
             GamePacket packetFromServer = null;
             try {
                 packetFromServer = (GamePacket) fromServ.readObject();
-                System.out.println("Receiver got packet with player name: " + packetFromServer.player_name + "type: " + packetFromServer.type);
+                System.out.println("Receiver got packet with player name: " + packetFromServer.player_name + " type: " + packetFromServer.type);
             } catch (IOException x) {
                 System.err.println("Receiver missed reading packet!!");
                 continue;
@@ -247,7 +247,7 @@ public class ClientArbiter {
     private final InBufferThread inThread;
 
     private Maze maze;
-    private int seed;
+    private final int seed;
 
     public ClientArbiter(String myClientName, String serverHost, int serverPort, int myPort){
         clientNameMap = new ConcurrentHashMap<String, Client>();
@@ -279,10 +279,6 @@ public class ClientArbiter {
         seed = seedMessage.seed;
         
         maze = null;
-    }
-
-    public synchronized void setSeed(int s){
-        seed = s;
     }
 
     private static int getPacketTypeFromClientEvent(ClientEvent eType){

@@ -123,7 +123,7 @@ public class GUIClient extends LocalClient implements KeyListener {
                 } else if(action == RIGHT) {
                         arbiter.requestLocalClientEvent(this, ClientEvent.turnRight);
                 // Spacebar fires.
-                } else if(keyCode == KeyEvent.VK_SPACE) {
+                } else if(keyCode == KeyEvent.VK_SPACE && maze.clientCanFire(this)) {
                         arbiter.requestLocalClientEvent(this, ClientEvent.fire);
                 }
         }

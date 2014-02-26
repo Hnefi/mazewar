@@ -298,6 +298,10 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 notifyClientRemove(client);
         }
 
+        public synchronized boolean clientCanFire(LocalClient client){
+            return (!clientFired.contains(client));
+        }
+
         public synchronized boolean clientFire(Client client) {
                 assert(client != null);
                 // If the client already has a projectile in play

@@ -63,6 +63,8 @@ public abstract class Maze {
      */
     public abstract void randomSpawnClient(LocalClient client);
 
+    public abstract boolean clientCanFire(LocalClient client);
+
     /**
      * Create a new {@link RemoteClient} with the given name.
      */
