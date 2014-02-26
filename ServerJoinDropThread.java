@@ -93,6 +93,7 @@ public class ServerJoinDropThread extends Thread {
             sendToAll(make_loc_thread);
 
             int num_players = map_of_buffers.size();
+            System.out.println("Map of buffers was of size: " + num_players);
 
             /* Track the number of responses and send these packets
              * to the new client */

@@ -31,11 +31,14 @@ public class GamePacket implements Serializable {
     public static final int CLIENT_JOINED = 202;
     public static final int CLIENT_LEFT = 203;
 
+    // this is only ever sent out and never received
+    public static final int SET_RAND_SEED = 999;
+
     // default message type
 	public int type = GamePacket.CLIENT_NULL;
 	
     // identifier for player
-	public String player_name;
+	public String player_name = null;
 
     // port this player is listening on
     public int port = -1;
@@ -48,6 +51,9 @@ public class GamePacket implements Serializable {
 
     // parent timestamp
     public int tstamp = -1;
+
+    // rand seed
+    public int seed = -1;
 
     // spawn point (NO FRIGGIN CAMPING)
     public Point you_are_here = null;

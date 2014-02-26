@@ -4,6 +4,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 public class GameServerClientThread extends Thread {
+    private final int seed = 42;
     private Socket socket = null;
     private String client_addr = null;
     private ArrayBlockingQueue<GamePacket> event_queue;
@@ -47,6 +48,15 @@ public class GameServerClientThread extends Thread {
                     map_of_buffers.putIfAbsent(packetFromClient.player_name,new_send_buf);
                     // Start sender thread.
                     new_sender_thread.start();
+
+                    /* Now need to pull a deterministic random seed out and send it to the client (place in
+                     * the sender buffer) */
+                    GamePacket seed_sender = new GamePacket();
+                    seed_sender.type = GamePacket.SET_RAND_SEED;
+                    seed_sender.seed = this.seed;
+
+                    new_send_buf.putInBuf(seed_sender); // this should wake the sender
+
                     continue;
                 }
 
@@ -56,7 +66,6 @@ public class GameServerClientThread extends Thread {
                 to_queue.type = packetFromClient.type;
                 to_queue.player_name = packetFromClient.player_name;
                 if(packetFromClient.john_doe != null) {
-                    // then there was a killer (but not a secret one)
                     to_queue.john_doe = packetFromClient.john_doe;
                 } 
                 to_queue.request = packetFromClient.request^true; // inv

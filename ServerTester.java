@@ -94,7 +94,7 @@ class Sender implements Runnable
         GamePacket fcon = new GamePacket();
         fcon.type = GamePacket.FIRST_CONNECT;
         fcon.port = my_port;
-        fcon.player_name = "mark";
+        fcon.player_name = "mark" + String.valueOf(my_port);
         try {
             toServ.writeObject(fcon);
         } catch (IOException x) {
@@ -105,25 +105,28 @@ class Sender implements Runnable
         // initialize array of game packets
         to_send = new ArrayList<GamePacket>(5);
         ArrayList<GamePacket> before_send = new ArrayList<GamePacket>();
-        for(int i = 0;i<5;i++) {
+        for(int i = 0;i<6;i++) {
             System.out.println(i);
             GamePacket tmp = new GamePacket();
-            tmp.player_name = "Mark";
+            tmp.player_name = "mark" + String.valueOf(my_port);
             tmp.request = true;
             switch(i) {
                 case 0:
-                    tmp.type = GamePacket.CLIENT_MOVED_FORWARD;
+                    tmp.type = GamePacket.CLIENT_JOINED;
                     break;
                 case 1:
-                    tmp.type = GamePacket.CLIENT_MOVED_BACK;
+                    tmp.type = GamePacket.CLIENT_MOVED_FORWARD;
                     break;
                 case 2:
-                    tmp.type = GamePacket.CLIENT_INVERT;
+                    tmp.type = GamePacket.CLIENT_MOVED_BACK;
                     break;
                 case 3:
-                    tmp.type = GamePacket.CLIENT_TURN_L;
+                    tmp.type = GamePacket.CLIENT_INVERT;
                     break;
                 case 4:
+                    tmp.type = GamePacket.CLIENT_TURN_L;
+                    break;
+                case 5:
                     tmp.type = GamePacket.CLIENT_TURN_R;
                     break;
             }
@@ -144,6 +147,11 @@ class Sender implements Runnable
             after_receive = x_point.exchange(before_send);
         } catch (InterruptedException x) {
             Thread.currentThread().interrupt();
+        }
+        Iterator<GamePacket> i = after_receive.iterator();
+        while(i.hasNext()) {
+            GamePacket p = i.next();
+            System.out.println("Packet type in after_receive: " + p.type + " with name: " + p.player_name);
         }
 
         System.out.println("Sender thread success!!!!");
