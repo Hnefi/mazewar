@@ -23,11 +23,10 @@ public class GameServerSenderThread extends Thread {
             ObjectInputStream fromClient = new ObjectInputStream(socket.getInputStream());
 
             while ( isInterrupted()== false ) {
-                System.out.println("Sender trying to take...");
                 GamePacket to_send = my_send_buffer.takeFromBuf();
 
                 /* If we get something, then send that shiz */
-                System.out.println("Sender thread writing GamePacket to player name " + to_send.player_name);
+                System.out.println("Sender thread writing GamePacket of type " +to_send.player_name + " to player name " + to_send.player_name);
                 toClient.writeObject(to_send);
             }
             /* cleanup when client exits */

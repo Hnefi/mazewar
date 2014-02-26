@@ -60,6 +60,8 @@ public class GameServerClientThread extends Thread {
                     continue;
                 }
 
+                System.out.println("Receiver thread for player " + packetFromClient.player_name + " got packet of type " + packetFromClient.type);
+
                 /* Otherwise, simply process the event message and enqueue it. */
 
                 GamePacket to_queue = new GamePacket();

@@ -124,10 +124,11 @@ public class ServerJoinDropThread extends Thread {
             try {
                 System.out.println("Getting location from the new guy.");
                 GamePacket new_player_loc = join_queue.take(); //block
-                assert(new_player_loc.type == GamePacket.LOCATION_REQ
+                assert(new_player_loc.type == GamePacket.CLIENT_SPAWNED
                         && new_player_loc.player_name == new_player_name);
                 new_player_loc.type = GamePacket.CLIENT_SPAWNED;
                 new_player_loc.player_name = new_player_name;
+                System.out.println("Sending spawn out to all of the players.");
                 sendToAll(new_player_loc);
             } catch (InterruptedException x) {
                 Thread.currentThread().interrupt();
