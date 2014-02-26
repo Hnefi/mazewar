@@ -135,7 +135,7 @@ class MasterThread implements Runnable {
 
         // we should get back a packet with a random seed in it.
         
-        assert (seed_pack.type == GamePacket.SET_RAND_SEED && seed_pack.seed == 42);
+        //assert (seed_pack.type == GamePacket.SET_RAND_SEED && seed_pack.seed == 42);
 
     }
 

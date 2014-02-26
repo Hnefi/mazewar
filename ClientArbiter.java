@@ -137,6 +137,7 @@ class OutBufferThread extends Thread {
             //TODO: Replace this with a socket put
             GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
             try {
+                System.out.println("Sender writing packet with player name: " + packetToServer.player_name + " type: " + packetToServer.type);
                 toServ.writeObject(packetToServer);
             } catch (IOException x) {
                 System.err.println("Sender couldn't write packet.");
@@ -461,7 +462,7 @@ public class ClientArbiter {
         assert(dPoint != null);
 
         //write it to the output buffer for the outThread to find
-        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationRequest, clientName, null, dPoint, null));
+        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationResponse, clientName, null, dPoint, null));
     }
 
     public void createRemoteClientAndSendLocations(String remoteClientName){
