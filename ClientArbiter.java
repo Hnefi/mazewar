@@ -26,7 +26,7 @@ class ClientBufferQueue {
 
     public ClientBufferQueue(String cName){
         this.clientName = cName;
-        this.inBuf = new ArrayBlockingQueue<ClientQueueObject>(1);
+        this.inBuf = new ArrayBlockingQueue<ClientQueueObject>(INBUFFERSIZE);
     }
    
     public void insertToBuf(ClientQueueObject entry){
@@ -48,15 +48,42 @@ class ClientBufferQueue {
     }
 }
 
+class ClientSocketQueue {
+    private final int SOCKETBUFFERSIZE = 30;
+    private final ArrayBlockingQueue<GamePacket> buffer;
+
+    public ClientSocketQueue(){
+        this.buffer = new ArrayBlockingQueue<GamePacket>(SOCKETBUFFERSIZE);
+    }
+   
+    public void insertToBuf(GamePacket entry){
+        try {
+            buffer.put(entry);
+        } catch (InterruptedException x) {
+            Thread.currentThread().interrupt(); // propagate
+        }
+    }
+    
+    public GamePacket takeFromBuf(){
+        GamePacket ret = null;   
+        try {
+            ret = buffer.take(); // blocking
+        } catch (InterruptedException x) {
+            Thread.currentThread().interrupt(); // propagate
+        }
+        return ret; 
+    }
+}
+
 
 //TODO: Split this class into two, each using a socket to communicate with the server
 class OutBufferThread extends Thread {
     private final ClientBufferQueue outBuf;
 
     //TODO: Replace this with an open socket to the server
-    private final ClientBufferQueue socket;
+    private final ClientSocketQueue socket;
 
-    public OutBufferThread(ClientBufferQueue oBuf, ClientBufferQueue socketProxy){
+    public OutBufferThread(ClientBufferQueue oBuf, ClientSocketQueue socketProxy){
         super("OutBufferThread");
         this.outBuf = oBuf;
         this.socket = socketProxy;
@@ -71,22 +98,25 @@ class OutBufferThread extends Thread {
 
             //TODO: Format the ClientQueueObject as a GamePacket for the server
             //TODO: Replace this with a socket put
-            this.socket.insertToBuf(messageToServer);
+            GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
+
+            this.socket.insertToBuf(packetToServer);
 
             //Until we actually connect to the server, fake it to look like we've received all other locations.
             if (messageToServer.eventType == ClientEvent.join){
-                this.socket.insertToBuf(new ClientQueueObject(ClientEvent.locationComplete, messageToServer.clientName, null, null));
+                ClientQueueObject doneObject = new ClientQueueObject(ClientEvent.locationComplete, messageToServer.clientName, null, null);
+                this.socket.insertToBuf(ClientArbiter.getPacketFromClientQ(doneObject));
             }
         }
     }
 }
 
 class InBufferThread extends Thread {
-    private final ClientBufferQueue socket;
+    private final ClientSocketQueue socket;
     private final ConcurrentHashMap<String, ClientBufferQueue> inBufMap;
     private final ClientArbiter arbiter;
 
-    public InBufferThread(ClientBufferQueue socketProxy, ConcurrentHashMap<String, ClientBufferQueue> iBufs, ClientArbiter arb){
+    public InBufferThread(ClientSocketQueue socketProxy, ConcurrentHashMap<String, ClientBufferQueue> iBufs, ClientArbiter arb){
         super("InBufferThread");
         this.socket = socketProxy;
         this.inBufMap = iBufs;
@@ -97,7 +127,8 @@ class InBufferThread extends Thread {
     @Override
     public void run() {
         while (!Thread.currentThread().isInterrupted()){
-            ClientQueueObject messageFromServer = this.socket.takeFromBuf();
+            GamePacket packetFromServer = this.socket.takeFromBuf();
+            ClientQueueObject messageFromServer = ClientArbiter.getClientQFromPacket(packetFromServer);
             assert(messageFromServer != null);
 
             String clientName = messageFromServer.clientName;
@@ -129,15 +160,16 @@ public class ClientArbiter {
 
     private final int OUTBUFFERSIZE = 50;
 
-    private final ClientBufferQueue socketProxy;
+    private final ClientSocketQueue socketProxy;
     private final ClientBufferQueue outBuffer;
     private final ConcurrentHashMap<String, ClientBufferQueue> inBufferMap;
     private final OutBufferThread outThread;
     private final InBufferThread inThread;
 
     private Maze maze;
-   
-    public ClientArbiter(){
+    private final int seed;
+
+    public ClientArbiter(String myClientName, String serverHost, int serverPort, int myPort){
         clientNameMap = new ConcurrentHashMap<String, Client>();
         threadWaitingOnMap = new ConcurrentHashMap<Long, ClientEvent>();
 
@@ -145,7 +177,8 @@ public class ClientArbiter {
         inBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
 
         //TODO: Open socket protocol; open two sockets to the server (send & receive)
-        socketProxy = new ClientBufferQueue("socketProxy");
+        socketProxy = new ClientSocketQueue();
+        seed = 42;
 
         //TODO: Pass the socket to the buffer threads
         outThread = new OutBufferThread(outBuffer, socketProxy);
@@ -255,7 +288,7 @@ public class ClientArbiter {
         //First find out what type of event we're dealing with
         ClientEvent eType = getClientEventFromPacketType(packet.type);
         DirectedPoint dPoint = packet.location;
-        if (dPoint == null){
+        if (dPoint == null && packet.you_are_here != null && packet.i_want_it_that_way != null){
             dPoint = new DirectedPoint(packet.you_are_here, packet.i_want_it_that_way);
         }
 
@@ -263,7 +296,7 @@ public class ClientArbiter {
     }
 
     public int getSeed(){
-        return 42;
+        return seed;
     }
 
     public void handleRemoteLocationMessage(ClientQueueObject q){
