@@ -6,12 +6,10 @@ import java.util.concurrent.*;
 class Receiver implements Runnable
 {
     ServerSocket l_sock;
-    Exchanger<ArrayList> x_point;
     ArrayList<GamePacket> to_get;
-    public Receiver(ServerSocket s,Exchanger<ArrayList> x)
+    public Receiver(ServerSocket s)
     {
         this.l_sock = s;
-        this.x_point = x;
         to_get = new ArrayList<GamePacket>();
     }
 
@@ -67,12 +65,9 @@ class Sender implements Runnable
 {
     Socket my_sock;
     int my_port;
-    Exchanger<ArrayList> x_point;
-    ArrayList<GamePacket> to_send;
-    public Sender(Socket s,Exchanger<ArrayList> x,int port)
+    public Sender(Socket s,int port)
     {
         this.my_sock = s;
-        this.x_point = x;
         this.my_port = port;
     }
 
@@ -158,6 +153,32 @@ class Sender implements Runnable
     }
 }
 
+public class MasterThread implements Runnable {
+    private int my_port;
+    private ArrayBlockingQueue<GamePacket> in_q;
+    private ArrayBlockingQueue<GamePacket> out_q;
+    private Thread sender;
+    private Thread receiver;
+
+    public MasterThread(Socket outgoing_sock,ServerSocket incoming_sock,int my_port )
+    {
+        // has to spawn the sub-threads and make the buffers etc
+        this.in_q = new ArrayBlockingQueue<GamePacket>(10);
+        this.out_q = new ArrayBlockingQueue<GamePacket>(10);
+        this.sender; = new Thread(new Sender(outgoing_sock,this.out_q));
+        this.receiver = new Thread(new Sender(incoming_sock,this.in_q));
+        sender.start();
+        receiver.start();
+    }
+
+    public void run()
+    {
+        /* This just manages buffers to test the joining protocol. */
+
+    }
+
+}
+
 public class ServerTester {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         String server_to_chk = null;
@@ -167,7 +188,6 @@ public class ServerTester {
 
         Socket outgoing_sock = null;
         ServerSocket listening_sock = null;
-        Exchanger x_point = null;
 
         /* SETUP: Takes in the server, the port it listens on, as well as
          * the port that WE are listening on. 
@@ -181,8 +201,6 @@ public class ServerTester {
                 listening_sock = new ServerSocket(my_port);
                 outgoing_sock = new Socket(server_to_chk,server_port);
 
-                x_point = new Exchanger<ArrayList>();
-
             } else {
                 System.err.println("ERROR: Invalid arguments!");
                 System.exit(-1);
@@ -195,6 +213,7 @@ public class ServerTester {
         // All this thing does is spawn a couple new sender/receiver
         // Runnables and set them into motion. 
         System.out.println("Setting tester threads in motion");
+        new Thread(new MasterThread( )).start();
         Thread send_thread = new Thread(new Sender(outgoing_sock,x_point,my_port));
         Thread recv_thread = new Thread(new Receiver(listening_sock,x_point));
         System.out.println("Starting threads");
