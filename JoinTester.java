@@ -119,30 +119,43 @@ class MasterThread implements Runnable {
     public void run()
     {
         /* This just manages buffers to test the joining protocol. */
+        GamePacket firstcon = new GamePacket();
+        firstcon.type = GamePacket.FIRST_CONNECT;
+        firstcon.player_name = "mark" + String.valueOf(my_port);
+        firstcon.port = my_port;
+        send(firstcon);
+
         GamePacket p = new GamePacket();
         p.player_name = "mark" + String.valueOf(my_port);
         p.request = true;
         p.type = GamePacket.CLIENT_JOINED;
 
         // now enqueue this packet to signal we are joining
+        
+
+        // we should get back a packet with a random seed in it.
+        
+        assert (seed_pack.type == GamePacket.SET_RAND_SEED && seed_pack.seed == 42);
+
+    }
+
+    private void send(GamePacket p){
         try { 
             out_q.put(p);
         } catch (InterruptedException x) {
             Thread.currentThread().interrupt();
         }
+    }
 
-        // we should get back a packet with a random seed in it.
-        GamePacket seed_pack = null;
+    private GamePacket recv() {
+        GamePacket p = null;
         try {
-            seed_pack = in_q.take();
+            p = in_q.take();
         } catch (InterruptedException x) {
             Thread.currentThread().interrupt();
         }
-        assert (seed_pack.type == GamePacket.SET_RAND_SEED && seed_pack.seed == 42);
-
-
+        return p;
     }
-
 }
 
 public class JoinTester {
