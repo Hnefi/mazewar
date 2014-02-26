@@ -153,10 +153,12 @@ public class Mazewar extends JFrame {
                 }
                  
                 // Create the GUIClient and connect it to the KeyListener queue
+                System.out.println("creating client with name " + name);
                 guiClient = new GUIClient(name);
                 arbiter.addLocalClientAndLoadRemoteClients(guiClient);
                 this.addKeyListener(guiClient);
-                
+                System.out.println("client creation successful!");
+
                 // Use braces to force constructors not to be called at the beginning of the
                 // constructor.
                 {
@@ -221,6 +223,8 @@ public class Mazewar extends JFrame {
                 overheadPanel.repaint();
                 this.requestFocusInWindow();
                
+                System.out.println("Adding robots...");
+                
                 { 
                     arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Norby"));
                     arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Robbie"));
@@ -230,6 +234,7 @@ public class Mazewar extends JFrame {
                     arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Prinky"));
                     arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Shinky"));
                 }
+                
         }
 
         
