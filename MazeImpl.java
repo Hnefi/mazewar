@@ -205,6 +205,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
         }
 
         public synchronized RemoteClient createRemoteClient(String remoteName){
+                System.out.println("Maze: Creating new remote client for " + remoteName);
                 RemoteClient rClient = new RemoteClient(remoteName, arbiter);
                 addClient(rClient);
                 Thread rThread = new Thread(rClient);
@@ -234,7 +235,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 assert(client != null);
                 assert(dPoint != null);
                 assert(checkBounds(dPoint));
-
+                System.out.println("Spawning client "+client.getName()+" at point " + dPoint);
                 CellImpl cell = getCellImpl(dPoint);
                 if (cell.getContents() == null){
                     cell.setContents(client);

@@ -142,8 +142,10 @@ public class ServerJoinDropThread extends Thread {
 
             /* Hand back to ServerArbiter */
             System.out.println("Handing back to the root ServerArbiter");
-            synch_point.set(0);
-            synch_point.notify();
+            synchronized(synch_point){
+                synch_point.set(0);
+                synch_point.notify();
+            }
             continue;
         }
     }

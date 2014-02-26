@@ -26,7 +26,7 @@ public class GameServerSenderThread extends Thread {
                 GamePacket to_send = my_send_buffer.takeFromBuf();
 
                 /* If we get something, then send that shiz */
-                System.out.println("Sender thread writing GamePacket of type " +to_send.player_name + " to player name " + to_send.player_name);
+                System.out.println("Sender thread writing GamePacket of type " +to_send.type + " to player name " + to_send.player_name);
                 toClient.writeObject(to_send);
             }
             /* cleanup when client exits */

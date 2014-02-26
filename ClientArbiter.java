@@ -386,10 +386,6 @@ public class ClientArbiter {
         //First find out what type of event we're dealing with
         ClientEvent eType = getClientEventFromPacketType(packet.type);
         DirectedPoint dPoint = packet.location;
-        if (dPoint == null && packet.you_are_here != null && packet.i_want_it_that_way != null){
-            dPoint = new DirectedPoint(packet.you_are_here, packet.i_want_it_that_way);
-        }
-
         return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed));
     }
 
@@ -467,7 +463,7 @@ public class ClientArbiter {
 
     public void createRemoteClientAndSendLocations(String remoteClientName){
         //Invoked on a pre-exisiting client machine on another machine trying to join
-
+        System.out.println("Arbiter: Creating a new remote client for client " + remoteClientName + " and replying with locations.");
         //First create the client
         maze.createRemoteClient(remoteClientName);
 
@@ -616,6 +612,7 @@ public class ClientArbiter {
     }
 
     public void addClient(Client c){
+        System.out.println("Arbiter: Adding client with name " + c.getName());
         clientNameMap.put(c.getName(), c);
         inBufferMap.put(c.getName(), new ClientBufferQueue(c.getName()));
         c.registerArbiter(this);
