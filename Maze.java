@@ -59,6 +59,11 @@ public abstract class Maze {
     public abstract void addClient(Client client);
 
     /**
+     * Create a new {@link RemoteClient} with the given name.
+     */
+    public abstract void createRemoteClient(String remoteName);
+
+    /**
      * Spawn a {@link Client} at a given {@link DirectedPoint} in the {@link Maze}.
      * @param client {@link Client} to be spawned
      * @param dpoint {@link DirectedPoint} to place the client
@@ -119,6 +124,8 @@ public abstract class Maze {
      * @return {@link Iterator} over clients in the {@link Maze}. 
      */
     public abstract Iterator getClients();
+
+
     
     /* Maze Listeners ******************************************************/
 

@@ -136,7 +136,9 @@ public class Mazewar extends JFrame {
                 // Create the maze
                 maze = new MazeImpl(new Point(mazeWidth, mazeHeight), mazeSeed);
                 assert(maze != null);
-                maze.addArbiter(arbiter);
+
+                // Register the maze with the arbiter and vice-versa
+                arbiter.registerMaze(maze);
                 
                 // Have the ScoreTableModel listen to the maze to find
                 // out how to adjust scores.
@@ -158,10 +160,6 @@ public class Mazewar extends JFrame {
                 // Use braces to force constructors not to be called at the beginning of the
                 // constructor.
                 {
-                        maze.addClient(new RobotClient("Norby"));
-                        maze.addClient(new RobotClient("Robbie"));
-                        maze.addClient(new RobotClient("Clango"));
-                        maze.addClient(new RobotClient("Marvin"));
                 }
 
                 
@@ -222,6 +220,16 @@ public class Mazewar extends JFrame {
                 setVisible(true);
                 overheadPanel.repaint();
                 this.requestFocusInWindow();
+               
+                { 
+                    maze.addClient(new RobotClient("Norby"));
+                    maze.addClient(new RobotClient("Robbie"));
+                    maze.addClient(new RobotClient("Clango"));
+                    maze.addClient(new RobotClient("Marvin"));
+                    maze.addClient(new RobotClient("Blinky"));
+                    maze.addClient(new RobotClient("Prinky"));
+                    maze.addClient(new RobotClient("Shinky"));
+                }
         }
 
         

@@ -37,6 +37,8 @@ public class ClientEvent {
         private static final int FIRE = 5;
         private static final int KILL = 6;
         private static final int SPAWN = 7;
+        private static final int JOIN = 8;
+        private static final int LOC_REQUEST = 9;
  
         /**
          * Default to 0, to be invalid.
@@ -92,4 +94,14 @@ public class ClientEvent {
          * Generated when a {@link Client} spawns.
          */
         public static final ClientEvent spawn = new ClientEvent(SPAWN);
+
+        /**
+         * Generated when a {@link Client} joins the session.
+         */
+        public static final ClientEvent join = new ClientEvent(JOIN);
+
+        /**
+         * Generated when a {@link Client} reports its location.
+         */
+        public static final ClientEvent locationRequest = new ClientEvent(LOC_REQUEST);
 }

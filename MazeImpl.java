@@ -203,6 +203,10 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 assert(this.arbiter != null);
                 this.arbiter = null;
         }
+
+        public synchronized void createRemoteClient(String remoteName){
+
+        }
         
         public synchronized void addClient(Client client) {
                 assert(client != null);
