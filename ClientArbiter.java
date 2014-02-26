@@ -154,13 +154,121 @@ public class ClientArbiter {
         maze = null;
     }
 
+    private static int getPacketTypeFromClientEvent(ClientEvent eType){
+        int packetType = GamePacket.CLIENT_NULL;
+        if(eType == ClientEvent.locationRequest){
+            packetType = GamePacket.LOCATION_REQ;
+        } else if (eType == ClientEvent.locationResponse){
+            packetType = GamePacket.LOCATION_RESP;
+        } else if (eType == ClientEvent.remoteLocation){
+            packetType = GamePacket.REMOTE_LOC;
+        } else if (eType == ClientEvent.locationComplete){
+            packetType = GamePacket.ALL_LOC_DONE;
+        } else if (eType == ClientEvent.moveForward){
+            packetType = GamePacket.CLIENT_MOVED_FORWARD;
+        } else if (eType == ClientEvent.moveBackward){
+            packetType = GamePacket.CLIENT_MOVED_BACK;
+        } else if (eType == ClientEvent.invert){
+            packetType = GamePacket.CLIENT_INVERT;
+        } else if (eType == ClientEvent.turnLeft){
+            packetType = GamePacket.CLIENT_TURN_L;
+        } else if (eType == ClientEvent.turnRight){
+            packetType = GamePacket.CLIENT_TURN_R;
+        } else if (eType == ClientEvent.fire){
+            packetType = GamePacket.CLIENT_FIRED;
+        } else if (eType == ClientEvent.kill){
+            packetType = GamePacket.CLIENT_KILLED;
+        } else if (eType == ClientEvent.spawn){
+            packetType = GamePacket.CLIENT_SPAWNED;
+        } else if (eType == ClientEvent.join){
+            packetType = GamePacket.CLIENT_JOINED;
+        } else if (eType == ClientEvent.leave){
+            packetType = GamePacket.CLIENT_LEFT;
+        }
+        return packetType;
+    }
+    private static ClientEvent getClientEventFromPacketType(int packetType){
+        ClientEvent eType = null;
+        switch(packetType){
+            case GamePacket.LOCATION_REQ:
+                eType = ClientEvent.locationRequest;
+                break;
+            case GamePacket.LOCATION_RESP:
+                eType = ClientEvent.locationResponse;
+                break;
+            case GamePacket.REMOTE_LOC:
+                eType = ClientEvent.remoteLocation;
+                break;
+            case GamePacket.ALL_LOC_DONE:
+                eType = ClientEvent.locationComplete;
+                break;
+            case GamePacket.CLIENT_MOVED_FORWARD:
+                eType = ClientEvent.moveForward;
+                break;
+            case GamePacket.CLIENT_MOVED_BACK:
+                eType = ClientEvent.moveBackward;
+                break;
+            case GamePacket.CLIENT_INVERT:
+                eType = ClientEvent.invert;
+                break;
+            case GamePacket.CLIENT_TURN_L:
+                eType = ClientEvent.turnLeft;
+                break;
+            case GamePacket.CLIENT_TURN_R:
+                eType = ClientEvent.turnRight;
+                break;
+            case GamePacket.CLIENT_FIRED:
+                eType = ClientEvent.fire;
+                break;
+            case GamePacket.CLIENT_KILLED:
+                eType = ClientEvent.kill;
+                break;
+            case GamePacket.CLIENT_SPAWNED:
+                eType = ClientEvent.spawn;
+                break;
+            case GamePacket.CLIENT_JOINED:
+                eType = ClientEvent.join;
+                break;
+            case GamePacket.CLIENT_LEFT:
+                eType = ClientEvent.leave;
+                break;
+            default:
+                break;
+        }
+        return eType;
+    }
+
+    public static GamePacket getPacketFromClientQ(ClientQueueObject qObject){
+        assert(qObject != null);
+
+        GamePacket packet = new GamePacket();
+        packet.type = getPacketTypeFromClientEvent(qObject.eventType);
+        packet.player_name = qObject.clientName;
+        packet.location = qObject.dPoint;
+        packet.john_doe = qObject.targetName;
+        return packet;
+    }
+
+    public static ClientQueueObject getClientQFromPacket(GamePacket packet){
+        assert(packet != null);
+
+        //First find out what type of event we're dealing with
+        ClientEvent eType = getClientEventFromPacketType(packet.type);
+        DirectedPoint dPoint = packet.location;
+        if (dPoint == null){
+            dPoint = new DirectedPoint(packet.you_are_here, packet.i_want_it_that_way);
+        }
+
+        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint));
+    }
+
     public int getSeed(){
         return 42;
     }
 
-    public void handleRemoteLocationRequest(ClientQueueObject q){
+    public void handleRemoteLocationMessage(ClientQueueObject q){
         assert(q != null);
-        assert(q.eventType == ClientEvent.locationRequest);
+        assert(q.eventType == ClientEvent.remoteLocation);
         assert(maze != null);
 
         String remoteName = q.targetName;
@@ -196,8 +304,10 @@ public class ClientArbiter {
             eventFromServer = objectFromServer.eventType;
             if (eventFromServer == ClientEvent.locationComplete){
                 break;
-            } else if (eventFromServer == ClientEvent.locationRequest){
-                handleRemoteLocationRequest(objectFromServer);
+            } else if (eventFromServer == ClientEvent.remoteLocation){
+                handleRemoteLocationMessage(objectFromServer);
+            } else {
+                System.out.println("ERROR: Received unexpected packet of type " + clientEventAsString(eventFromServer) + " during add protocol.");
             }
         }
 
@@ -318,6 +428,9 @@ public class ClientArbiter {
         outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p));
 
         //Record that this thread is currently waiting for a reply
+        Long curThreadId = Thread.currentThread().getId();
+        assert(threadWaitingOnMap.get(curThreadId) == null);
+
         threadWaitingOnMap.put(Thread.currentThread().getId(), ce);
 
         //Now wait until your input buffer gets populated and process the event

@@ -42,8 +42,11 @@ public class ClientEvent {
 
         //Player join events
         private static final int JOIN = 8;
-        private static final int LOC_REQUEST = 9;
-        private static final int LOC_COMPLETE = 10;
+        private static final int LEAVE = 9;
+        private static final int LOCATION_REQUEST = 10;
+        private static final int LOCATION_RESPONSE = 11;
+        private static final int REMOTE_LOCATION = 12;
+        private static final int LOCATION_COMPLETE = 13;
  
         /**
          * Default to 0, to be invalid.
@@ -106,12 +109,27 @@ public class ClientEvent {
         public static final ClientEvent join = new ClientEvent(JOIN);
 
         /**
+         * Generated when a {@link Client} leaves the session.
+         */
+        public static final ClientEvent leave = new ClientEvent(LEAVE);
+
+        /**
+         * Generated when a {@link Client} is asked to report its location.
+         */
+        public static final ClientEvent locationRequest = new ClientEvent(LOCATION_REQUEST);
+        
+        /**
          * Generated when a {@link Client} reports its location.
          */
-        public static final ClientEvent locationRequest = new ClientEvent(LOC_REQUEST);
+        public static final ClientEvent locationResponse = new ClientEvent(LOCATION_RESPONSE);
         
+        /**
+         * Generated when a {@link Client} receives the location of a {@link RemoteClient}.
+         */
+        public static final ClientEvent remoteLocation = new ClientEvent(REMOTE_LOCATION);
+
         /**
          * Generated when a {@link Client} has received the locations for all other clients.
          */
-        public static final ClientEvent locationComplete = new ClientEvent(LOC_COMPLETE);
+        public static final ClientEvent locationComplete = new ClientEvent(LOCATION_COMPLETE);
 }
