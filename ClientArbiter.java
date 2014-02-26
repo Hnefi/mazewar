@@ -203,7 +203,7 @@ class InBufferThread extends Thread {
             assert(messageFromServer != null);
 
             String clientName = messageFromServer.clientName;
-            if (clientName == null && packetFromServer.type == SET_RAND_SEED){
+            if (clientName == null && packetFromServer.type == GamePacket.SET_RAND_SEED){
                 //must be meant for the arbiter!
                 clientName = "arbiter";
             }
@@ -235,8 +235,8 @@ public class ClientArbiter {
 
     private final int OUTBUFFERSIZE = 50;
 
-    private final Socket toServerSocket;
-    private final ServerSocket fromServerListener;
+    private Socket toServerSocket;
+    private ServerSocket fromServerListener;
 
     private final ClientBufferQueue outBuffer;
     private final ConcurrentHashMap<String, ClientBufferQueue> inBufferMap;
@@ -260,8 +260,15 @@ public class ClientArbiter {
         inBufferMap.put("arbiter", arbiterInBuffer);
 
         //TODO: Open socket protocol; open two sockets to the server (send & receive)
-        toServerSocket = new Socket(serverHost, serverPort);
-        fromServerListener = new ServerSocket(myPort);
+        toServerSocket = null;
+        fromServerListener = null;
+        try {
+            toServerSocket = new Socket(serverHost, serverPort);
+            fromServerListener = new ServerSocket(myPort);
+        } catch (Exception x) {
+            System.err.println("ERROR: Exception " + x.toString()+ " thrown on attempting to open sockets.");
+            System.exit(-1);
+        }
 
         //TODO: Pass the socket to the buffer threads
         outThread = new OutBufferThread(outBuffer, myClientName, toServerSocket, myPort);
