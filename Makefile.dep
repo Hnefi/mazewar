@@ -11,6 +11,8 @@ GameServer.class: ServerJoinDropThread.java
 GameServer.class: ServerJoinDropThread.class
 GameServer.class: ServerTester.java
 GameServer.class: ServerTester.class
+GameServer.class: JoinTester.java
+GameServer.class: JoinTester.class
 
 GameServerClientThread.class: GameServerClientThread.java
 GameServerClientThread.class: GamePacket.java
@@ -33,6 +35,7 @@ SendBuf.class: SendBuf.java
 ServerArbiter.class: ServerArbiter.java
 
 ServerTester.class: ServerTester.java
+JoinTester.class: JoinTester.java
 
 Cell.class : Cell.java
 Cell.class : Direction.java

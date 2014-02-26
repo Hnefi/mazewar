@@ -6,57 +6,45 @@ import java.util.concurrent.*;
 class Receiver implements Runnable
 {
     ServerSocket l_sock;
-    ArrayList<GamePacket> to_get;
-    public Receiver(ServerSocket s)
+    ArrayBlockingQueue<GamePacket> in_q;
+    public Receiver(ServerSocket s,ArrayBlockingQueue<GamePacket> q)
     {
         this.l_sock = s;
-        to_get = new ArrayList<GamePacket>();
+        this.in_q = q;
     }
 
     public void run()
-    {
-        /* Block until we get a new connection from the server */
-        Socket my_sock = null;
-        try {
-            my_sock = l_sock.accept();
-        } catch (IOException consumed) {
-            System.err.println("Receiver couldn't open socket.");
-        }
+    { 
+        ObjectOutputStream toClient = null;
+        ObjectInputStream fromClient = null;
+        Socket socket = null;
+        try{
+            /* First thing is to wait until the server gives us a new connected two-way socket */
+            socket = l_sock.accept();
 
-        System.out.println("Receiver thread got new socket.");
+            /* stream to read from client */
+            toClient = new ObjectOutputStream(socket.getOutputStream());
+            fromClient = new ObjectInputStream(socket.getInputStream());
 
-        /* Open socket and listen on it for 5 GamePackets */
-        int num_received = 0;
-        ObjectInputStream fromServ = null;
-        ObjectOutputStream toServ = null;
-        try {
-            toServ = new ObjectOutputStream(my_sock.getOutputStream());
-            fromServ = new ObjectInputStream(my_sock.getInputStream());
-        } catch (IOException x) {
-            System.err.println("Receiver couldn't open input stream with message: " + x.getMessage());
-        }
-        System.out.println("Receiver thread got new Input stream successfully.");
-        while (num_received < 5) {
-            GamePacket received;
-            try {
-                received = (GamePacket) fromServ.readObject();
-                System.out.println("Receiver got packet with player name: " + received.player_name + "type: " + received.type);
-                to_get.add(received); 
-                num_received++;
-            } catch (IOException x) {
-                System.err.println("Receiver missed reading packet!!");
-                num_received++;
-            } catch (ClassNotFoundException cnf) {
-                System.err.println("Object doesn't match GamePacket.");
+            GamePacket packetFromClient;
+
+            while (( packetFromClient = (GamePacket) fromClient.readObject()) != null && Thread.currentThread().isInterrupted() == false ) {
+                try {
+                    in_q.put(packetFromClient);
+                } catch (InterruptedException x) {
+                    Thread.currentThread().interrupt();
+                }
             }
-        }
-        ArrayList<GamePacket> before_send = null; 
-        try {
-            before_send = x_point.exchange(to_get);
-        } catch (InterruptedException x) {
-            Thread.currentThread().interrupt();
-        }
 
+            /* cleanup when client exits */
+            fromClient.close();
+            toClient.close();
+            socket.close();
+        } catch (IOException x) {
+            System.err.println("IOException: " + x.toString() + " in receiver thread");
+        } catch (ClassNotFoundException x) {
+            System.err.println("Read object got wrong object type.");
+        }
         System.out.println("Receiver thread done!!!!!!");
     }
 }
@@ -65,121 +53,99 @@ class Sender implements Runnable
 {
     Socket my_sock;
     int my_port;
-    public Sender(Socket s,int port)
+    ArrayBlockingQueue<GamePacket> out_q;
+    public Sender(Socket s,int port,ArrayBlockingQueue<GamePacket> q)
     {
         this.my_sock = s;
         this.my_port = port;
+        this.out_q = q;
     }
 
     public void run()
     {
-        /* Open sockets */
-        ObjectOutputStream toServ = null;
-        ObjectInputStream fromServ = null;
-        try {
-            toServ = new ObjectOutputStream(my_sock.getOutputStream());
-            fromServ = new ObjectInputStream(my_sock.getInputStream());
-        } catch (IOException x) {
-            System.err.println("Sender couldn't open streams.");
-        }
+        ObjectOutputStream toClient = null;
+        ObjectInputStream fromClient = null;
+        try{
+            /* stream to write to client */
+            toClient = new ObjectOutputStream(my_sock.getOutputStream());
+            fromClient = new ObjectInputStream(my_sock.getInputStream());
 
-        System.out.println("Sender trying to write FCON.");
+            while ( Thread.currentThread().isInterrupted() == false ) {
+                System.out.println("Sender trying to take...");
+                GamePacket to_send = null;
+                try {
+                    to_send = out_q.take();
+                } catch (InterruptedException x) {
+                    Thread.currentThread().interrupt();
+                }
 
-        /* Send a FIRST_CONNECT so that the receiver thread can open its communication. */
-        GamePacket fcon = new GamePacket();
-        fcon.type = GamePacket.FIRST_CONNECT;
-        fcon.port = my_port;
-        fcon.player_name = "mark" + String.valueOf(my_port);
-        try {
-            toServ.writeObject(fcon);
-        } catch (IOException x) {
-            System.err.println("Sender couldn't write FCON.");
-        }
-        System.out.println("Sender thread wrote FCON packet.");
-
-        // initialize array of game packets
-        to_send = new ArrayList<GamePacket>(5);
-        ArrayList<GamePacket> before_send = new ArrayList<GamePacket>();
-        for(int i = 0;i<6;i++) {
-            System.out.println(i);
-            GamePacket tmp = new GamePacket();
-            tmp.player_name = "mark" + String.valueOf(my_port);
-            tmp.request = true;
-            switch(i) {
-                case 0:
-                    tmp.type = GamePacket.CLIENT_JOINED;
-                    break;
-                case 1:
-                    tmp.type = GamePacket.CLIENT_MOVED_FORWARD;
-                    break;
-                case 2:
-                    tmp.type = GamePacket.CLIENT_MOVED_BACK;
-                    break;
-                case 3:
-                    tmp.type = GamePacket.CLIENT_INVERT;
-                    break;
-                case 4:
-                    tmp.type = GamePacket.CLIENT_TURN_L;
-                    break;
-                case 5:
-                    tmp.type = GamePacket.CLIENT_TURN_R;
-                    break;
+                /* If we get something, then send that shiz */
+                System.out.println("Sender thread writing GamePacket to player name " + to_send.player_name);
+                toClient.writeObject(to_send);
             }
-            // put into queue;
-            System.out.println("Adding to the list...");
-            to_send.add(tmp);
-            before_send.add(tmp);
-            System.out.println("Sender thread wrote packet " + i);
-            try {
-                toServ.writeObject(tmp);
-            } catch (IOException x) {
-                System.err.println("Sender thread couldn't send packet" + i); 
-            }
-        }
 
-        ArrayList<GamePacket> after_receive = null;
-        try {
-            after_receive = x_point.exchange(before_send);
-        } catch (InterruptedException x) {
-            Thread.currentThread().interrupt();
+            /* cleanup when client exits */
+            toClient.close();
+            fromClient.close();
+            my_sock.close();
+        } catch (IOException x) {
+            System.err.println("IOExceptioN: " + x.toString() + " in sender thread.");
         }
-        Iterator<GamePacket> i = after_receive.iterator();
-        while(i.hasNext()) {
-            GamePacket p = i.next();
-            System.out.println("Packet type in after_receive: " + p.type + " with name: " + p.player_name);
-        }
-
-        System.out.println("Sender thread success!!!!");
+        System.out.println("Thread exiting for client sender thread with information: " + my_sock.toString() );
     }
 }
 
-public class MasterThread implements Runnable {
+class MasterThread implements Runnable {
     private int my_port;
     private ArrayBlockingQueue<GamePacket> in_q;
     private ArrayBlockingQueue<GamePacket> out_q;
     private Thread sender;
     private Thread receiver;
 
-    public MasterThread(Socket outgoing_sock,ServerSocket incoming_sock,int my_port )
+    public MasterThread(Socket outgoing_sock,ServerSocket incoming_sock,int port )
     {
         // has to spawn the sub-threads and make the buffers etc
+        this.my_port = port;
         this.in_q = new ArrayBlockingQueue<GamePacket>(10);
         this.out_q = new ArrayBlockingQueue<GamePacket>(10);
-        this.sender; = new Thread(new Sender(outgoing_sock,this.out_q));
-        this.receiver = new Thread(new Sender(incoming_sock,this.in_q));
+        sender = new Thread(new Sender(outgoing_sock,my_port,this.out_q));
+        receiver = new Thread(new Receiver(incoming_sock,this.in_q));
         sender.start();
         receiver.start();
+        System.out.println("Master spawned new threads!!!");
+
     }
 
     public void run()
     {
         /* This just manages buffers to test the joining protocol. */
+        GamePacket p = new GamePacket();
+        p.player_name = "mark" + String.valueOf(my_port);
+        p.request = true;
+        p.type = GamePacket.CLIENT_JOINED;
+
+        // now enqueue this packet to signal we are joining
+        try { 
+            out_q.put(p);
+        } catch (InterruptedException x) {
+            Thread.currentThread().interrupt();
+        }
+
+        // we should get back a packet with a random seed in it.
+        GamePacket seed_pack = null;
+        try {
+            seed_pack = in_q.take();
+        } catch (InterruptedException x) {
+            Thread.currentThread().interrupt();
+        }
+        assert (seed_pack.type == GamePacket.SET_RAND_SEED && seed_pack.seed == 42);
+
 
     }
 
 }
 
-public class ServerTester {
+public class JoinTester {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         String server_to_chk = null;
         int server_port = -1;
@@ -213,12 +179,6 @@ public class ServerTester {
         // All this thing does is spawn a couple new sender/receiver
         // Runnables and set them into motion. 
         System.out.println("Setting tester threads in motion");
-        new Thread(new MasterThread( )).start();
-        Thread send_thread = new Thread(new Sender(outgoing_sock,x_point,my_port));
-        Thread recv_thread = new Thread(new Receiver(listening_sock,x_point));
-        System.out.println("Starting threads");
-        recv_thread.start();
-        send_thread.start();
-
+        new Thread(new MasterThread(outgoing_sock,listening_sock,my_port)).start();
     }
 }
