@@ -71,6 +71,7 @@ public class GameServerClientThread extends Thread {
                     to_queue.john_doe = packetFromClient.john_doe;
                 } 
                 to_queue.request = packetFromClient.request^true; // inv
+                to_queue.location = packetFromClient.location;
 
                 enqueue_event(to_queue);
 

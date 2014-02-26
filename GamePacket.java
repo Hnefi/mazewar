@@ -56,8 +56,6 @@ public class GamePacket implements Serializable {
     public int seed = -1;
 
     // spawn point (NO FRIGGIN CAMPING)
-    public Point you_are_here = null;
-    public Direction i_want_it_that_way = null;
     public DirectedPoint location = null;
 
 }
