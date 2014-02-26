@@ -104,6 +104,8 @@ public class ServerJoinDropThread extends Thread {
                     GamePacket response = join_queue.take(); //block
                     assert(response.type == GamePacket.LOCATION_RESP);
                     response.type = GamePacket.REMOTE_LOC; 
+                    response.john_doe = response.player_name;
+                    response.player_name = new_player_name;
                     sendToNewClient(new_player_name,response);
                     num_resp++;
                 } catch (InterruptedException x) {
