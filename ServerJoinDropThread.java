@@ -98,8 +98,9 @@ public class ServerJoinDropThread extends Thread {
             /* Track the number of responses and send these packets
              * to the new client */
             int num_resp = 0;
-            while (num_resp < num_players) {
+            while (num_resp < num_players - 1) {
                 try{
+                    System.out.println("Join handler is waiting for " + (num_players - 1 - num_resp) + " more replies.");
                     GamePacket response = join_queue.take(); //block
                     assert(response.type == GamePacket.LOCATION_RESP);
                     response.type = GamePacket.REMOTE_LOC; 
@@ -112,6 +113,7 @@ public class ServerJoinDropThread extends Thread {
 
             /* Now send a new packet to the new client saying that
              * he's now gotten all of the remote locations. */
+            System.out.println("Sending all loc done packet to new client.");
             GamePacket all_loc_comp = new GamePacket();
             all_loc_comp.type = GamePacket.ALL_LOC_DONE;
             sendToNewClient(new_player_name,all_loc_comp);
@@ -119,6 +121,7 @@ public class ServerJoinDropThread extends Thread {
             /* Final step - the new client should give us a packet
              * that indicates the location he is to spawn at. */
             try {
+                System.out.println("Getting location from the new guy.");
                 GamePacket new_player_loc = join_queue.take(); //block
                 assert(new_player_loc.type == GamePacket.LOCATION_REQ
                         && new_player_loc.player_name == new_player_name);
@@ -133,6 +136,7 @@ public class ServerJoinDropThread extends Thread {
              * the next player joins and we have more to do. */
 
             /* Hand back to ServerArbiter */
+            System.out.println("Handing back to the root ServerArbiter");
             synch_point.set(0);
             synch_point.notify();
             continue;
