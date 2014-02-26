@@ -126,6 +126,7 @@ public class ServerJoinDropThread extends Thread {
                 assert(new_player_loc.type == GamePacket.LOCATION_REQ
                         && new_player_loc.player_name == new_player_name);
                 new_player_loc.type = GamePacket.CLIENT_SPAWNED;
+                new_player_loc.player_name = new_player_name;
                 sendToAll(new_player_loc);
             } catch (InterruptedException x) {
                 Thread.currentThread().interrupt();
