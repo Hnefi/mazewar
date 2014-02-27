@@ -63,7 +63,10 @@ public abstract class Maze {
      */
     public abstract void randomSpawnClient(LocalClient client);
 
-    public abstract boolean clientCanFire(LocalClient client);
+    /*
+     * Returns whether a given {@link Client} is allowed to fire right now.
+     */
+    public abstract boolean clientCanFire(Client client);
 
     /**
      * Create a new {@link RemoteClient} with the given name.
