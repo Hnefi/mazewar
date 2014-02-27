@@ -27,17 +27,18 @@ public class GameServerSenderThread extends Thread {
                 if (to_send.type == GamePacket.DIE) {
                     // this is a signal that our connected player left the game, so don't send anything,
                     // die, and clean up.
-                    System.out.println("Sender for player: " + to_send.player_name + " got signalled that it is to go off and die since the player left. Don't write to socket, instead clean up and die. ");
+                    //System.out.println("Sender for player: " + to_send.player_name + " got signalled that it is to go off and die since the player left. Don't write to socket, instead clean up and die. ");
                     toClient.writeObject(to_send);
                     break;
                 }
 
                 /* If we get something, then send that shiz */
-                System.out.println("Sender thread writing GamePacket of type " +to_send.type + " to player name " + to_send.player_name);
+                //System.out.println("Sender thread writing GamePacket of type " +to_send.type + " to player name " + to_send.player_name);
                 toClient.writeObject(to_send);
             }
             /* cleanup when client exits */
-            System.out.println("Server sender thread exiting and closing sockets.....");
+
+            System.out.println("Sender thread exiting for client : " + socket.toString() );
             fromClient.close();
             toClient.close();
             socket.close();
@@ -46,6 +47,5 @@ public class GameServerSenderThread extends Thread {
             System.out.println("IOException in GameServerSenderThread "+e.getMessage());
         }
 
-        System.out.println("Thread exiting for client sender thread with information: " + socket.toString() );
     }
 }

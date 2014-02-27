@@ -61,17 +61,17 @@ public class GameServerClientThread extends Thread {
                 } else if (packetFromClient.type == GamePacket.CLIENT_LEFT) { // our player left. die!!!!
                     /* First of all we need to put this in the event queue as usual,
                      * and then we know that our client is gone so we can close the socket and die. */
-                    System.out.println("Receiver for player: " + packetFromClient.player_name + " is putting its last packet in the event queue and then going off to die.");
+                    //System.out.println("Receiver for player: " + packetFromClient.player_name + " is putting its last packet in the event queue and then going off to die.");
                     packetFromClient.request ^= true; // inv direction
                     enqueue_event(packetFromClient);
                     break;
                 } else if (packetFromClient.type == GamePacket.CLIENT_NULL) {
                     /* if code comes here, there is an error in the packet */
-                    System.err.println("ERROR: Null Client* packet!!");
+                    //System.err.println("ERROR: Null Client* packet!!");
                     break;
                 }
 
-                System.out.println("Receiver thread for player " + packetFromClient.player_name + " got packet of type " + packetFromClient.type);
+                //System.out.println("Receiver thread for player " + packetFromClient.player_name + " got packet of type " + packetFromClient.type);
 
                 /* Otherwise, simply process the event message and enqueue it. */
 
@@ -89,6 +89,7 @@ public class GameServerClientThread extends Thread {
                 
             }
             /* cleanup when client exits */
+            System.out.println("Receiver thread exiting for client " + socket.toString());
             fromClient.close();
             toClient.close();
             socket.close();
@@ -98,7 +99,6 @@ public class GameServerClientThread extends Thread {
         } catch (ClassNotFoundException e) {
             System.out.println("ClassNotFoundException! "+e.toString());
         }
-        System.out.println("Thread exiting for client "+client_addr);
     }
 
     private void enqueue_event(GamePacket p) {

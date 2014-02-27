@@ -46,12 +46,11 @@ public class ServerArbiter extends Thread {
                     // must put this in the join queue to wake the 
                     // thread which manages join/drop
                     join_queue.put(to_send);
-                    System.out.println("Saw client join request from new player " + to_send.player_name + " , putting it in the join queue and going to sleep on the barrier.");
+                    System.out.println("Saw client join request from new player " + to_send.player_name + " ,handing execution to join/drop thread and sleeping.");
                     /* Hand exec to the join/drop thread and block */
                     synchronized (synch_point) {
                         synch_point.set(1); 
                         synch_point.notify();
-                        System.out.println("Handing execution to the join/drop and sleeping....");
                         while ( synch_point.get() == 1 ) {
                             try {
                                 synch_point.wait(); // blocks here wait on join
@@ -71,7 +70,7 @@ public class ServerArbiter extends Thread {
                     new_die.type = GamePacket.DIE;
                     new_die.player_name = to_send.player_name;
 
-                    System.out.println("Taking the buffer which corresponds to " + to_send.player_name + " out of the hashmap.");
+                    //System.out.println("Taking the buffer which corresponds to " + to_send.player_name + " out of the hashmap.");
 
                     SendBuf buffer_of_dead_thread = map_of_buffers.remove(to_send.player_name);
                     buffer_of_dead_thread.putInBuf(new_die);
@@ -82,7 +81,7 @@ public class ServerArbiter extends Thread {
                         interrupt();
                     }
                 }
-                System.out.println("Client event_queue arbiter took a new object, and generated timestamp " + to_send.tstamp + " . Now placing it into all of the send buffers.");
+                //System.out.println("Client event_queue arbiter took a new object, and generated timestamp " + to_send.tstamp + " . Now placing it into all of the send buffers.");
                 /* Now get an iterator over the hashmap and place this
                  * object in EACH send buffer. Java SHOULD enforce
                  * this operation as being thread-safe. */

@@ -24,6 +24,7 @@ public class ServerJoinDropThread extends Thread {
         this.join_queue = joinQ;
         this.map_of_buffers = bufMap;
         this.synch_point = cdl;
+        System.out.println("Created join thread which handles dynamic join/drop protocol.");
     }
 
     @Override
@@ -79,7 +80,7 @@ public class ServerJoinDropThread extends Thread {
             }
 
             /* Extract some info from the packet and go to work. */
-            System.out.println("New player = " + new_player_name);
+            //System.out.println("New player = " + new_player_name);
 
             /* Step 1 - get location from all existing clients, and
              * the number of responses that I will need. Also forward
@@ -93,16 +94,16 @@ public class ServerJoinDropThread extends Thread {
             sendToAll(make_loc_thread);
 
             int num_players = map_of_buffers.size();
-            System.out.println("Map of buffers was of size: " + num_players);
+            //System.out.println("Map of buffers was of size: " + num_players);
 
             /* Track the number of responses and send these packets
              * to the new client */
             int num_resp = 0;
             while (num_resp < num_players - 1) {
                 try{
-                    System.out.println("Join handler is waiting for " + (num_players - 1 - num_resp) + " more replies.");
+                    //System.out.println("Join handler is waiting for " + (num_players - 1 - num_resp) + " more replies.");
                     GamePacket response = join_queue.take(); //block
-                    assert(response.type == GamePacket.LOCATION_RESP);
+                    //assert(response.type == GamePacket.LOCATION_RESP);
                     response.type = GamePacket.REMOTE_LOC; 
                     response.john_doe = response.player_name;
                     response.player_name = new_player_name;
@@ -115,7 +116,7 @@ public class ServerJoinDropThread extends Thread {
 
             /* Now send a new packet to the new client saying that
              * he's now gotten all of the remote locations. */
-            System.out.println("Sending all loc done packet to new client.");
+            //System.out.println("Sending all loc done packet to new client.");
             GamePacket all_loc_comp = new GamePacket();
             all_loc_comp.type = GamePacket.ALL_LOC_DONE;
             all_loc_comp.player_name = new_player_name;
