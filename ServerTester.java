@@ -38,7 +38,7 @@ class Receiver implements Runnable
             System.err.println("Receiver couldn't open input stream with message: " + x.getMessage());
         }
         System.out.println("Receiver thread got new Input stream successfully.");
-        while (num_received < 5) {
+        while (num_received < 6) {
             GamePacket received;
             try {
                 received = (GamePacket) fromServ.readObject();
@@ -111,22 +111,22 @@ class Sender implements Runnable
             tmp.player_name = "mark" + String.valueOf(my_port);
             tmp.request = true;
             switch(i) {
-                case 0:
-                    tmp.type = GamePacket.CLIENT_JOINED;
+                case 5:
+                    tmp.type = GamePacket.CLIENT_LEFT;
                     break;
-                case 1:
+                case 0:
                     tmp.type = GamePacket.CLIENT_MOVED_FORWARD;
                     break;
-                case 2:
+                case 1:
                     tmp.type = GamePacket.CLIENT_MOVED_BACK;
                     break;
-                case 3:
+                case 2:
                     tmp.type = GamePacket.CLIENT_INVERT;
                     break;
-                case 4:
+                case 3:
                     tmp.type = GamePacket.CLIENT_TURN_L;
                     break;
-                case 5:
+                case 4:
                     tmp.type = GamePacket.CLIENT_TURN_R;
                     break;
             }
