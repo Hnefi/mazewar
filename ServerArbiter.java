@@ -69,6 +69,7 @@ public class ServerArbiter extends Thread {
                      * broadcast as normal. */
                     GamePacket new_die = new GamePacket();
                     new_die.type = GamePacket.DIE;
+                    new_die.player_name = to_send.player_name;
 
                     System.out.println("Taking the buffer which corresponds to " + to_send.player_name + " out of the hashmap.");
 

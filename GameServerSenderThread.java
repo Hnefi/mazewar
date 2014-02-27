@@ -28,6 +28,7 @@ public class GameServerSenderThread extends Thread {
                     // this is a signal that our connected player left the game, so don't send anything,
                     // die, and clean up.
                     System.out.println("Sender for player: " + to_send.player_name + " got signalled that it is to go off and die since the player left. Don't write to socket, instead clean up and die. ");
+                    toClient.writeObject(to_send);
                     break;
                 }
 
