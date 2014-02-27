@@ -42,8 +42,9 @@ public class RemoteClient extends Client implements Runnable {
 
         public void run(){
             assert(arbiter != null);
-            while(true){
-                arbiter.requestServerAction(this);
+            boolean keep_running = true;
+            while(keep_running){
+                keep_running = arbiter.requestServerAction(this);
             }   
         }
 }

@@ -508,13 +508,16 @@ public class ClientArbiter {
         }
     }
 
-    public void waitForEventAndProcess(String clientName){ 
+    public boolean waitForEventAndProcess(String clientName){ 
         ClientBufferQueue myInBuffer = inBufferMap.get(clientName);
-        assert(myInBuffer != null);
-        processEvent(myInBuffer.takeFromBuf());
+        if(myInBuffer != null){
+            processEvent(myInBuffer.takeFromBuf());
+            return true;
+        }
+        return false;
     }
 
-    public void requestServerAction(Client c){
+    public boolean requestServerAction(Client c){
         //This method is called in a tight loop for remote clients
         //Basically just block until the server instructs you to do something, do that something, and continue
         String clientName = null;
@@ -523,7 +526,7 @@ public class ClientArbiter {
         }
         assert(clientName != null);
 
-        waitForEventAndProcess(clientName);
+        return waitForEventAndProcess(clientName);
     }
 
     public void requestLocalClientEvent(LocalClient c, ClientEvent ce){
@@ -568,8 +571,12 @@ public class ClientArbiter {
             ret = "LOCATION_COMPLETE";
         } else if (ce == ClientEvent.setRandomSeed) {
             ret = "SET_RANDOM_SEED";
+        } else if (ce == ClientEvent.leave) {
+            ret = "LEAVE";
         } else if (ce == ClientEvent.die) {
             ret = "DIE";
+        } else {
+            ret = "UNKNOWN";
         }
         return ret;
     }
@@ -597,7 +604,12 @@ public class ClientArbiter {
         Long curThreadId = Thread.currentThread().getId();
         assert(threadWaitingOnMap.get(curThreadId) == null);
 
-        threadWaitingOnMap.put(Thread.currentThread().getId(), ce);
+        if(ce == ClientEvent.leave){
+            //if we request to leave, we expect to be told to die.
+            ce = ClientEvent.die;
+        }
+
+        threadWaitingOnMap.put(curThreadId, ce);
 
         //Now wait until your input buffer gets populated and process the event
         waitForEventAndProcess(clientName);
@@ -611,8 +623,12 @@ public class ClientArbiter {
         String targetName = fromQ.targetName;
         DirectedPoint p = fromQ.dPoint;
 
+        //Reacts to the response from the server regarding a client
+        Client c = clientNameMap.get(clientName);
+        assert(c != null);
+        
         ClientEvent waitingOn = threadWaitingOnMap.get(Thread.currentThread().getId());
-        if (waitingOn != ce){
+        if (c instanceof LocalClient && waitingOn != ce){
             String waitingString = clientEventAsString(waitingOn);
             assert (waitingString != null);
             String processString = clientEventAsString(ce);
@@ -622,9 +638,6 @@ public class ClientArbiter {
         }
         threadWaitingOnMap.remove(Thread.currentThread().getId());
         
-        //Reacts to the response from the server regarding a client
-        Client c = clientNameMap.get(clientName);
-        assert(c != null);
 
         if        (ce == ClientEvent.moveForward){
             c.forward();
