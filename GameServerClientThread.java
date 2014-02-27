@@ -58,6 +58,17 @@ public class GameServerClientThread extends Thread {
                     new_send_buf.putInBuf(seed_sender); // this should wake the sender
 
                     continue;
+                } else if (packetFromClient.type == GamePacket.CLIENT_LEFT) { // our player left. die!!!!
+                    /* First of all we need to put this in the event queue as usual,
+                     * and then we know that our client is gone so we can close the socket and die. */
+                    System.out.println("Receiver for player: " + packetFromClient.player_name + " is putting its last packet in the event queue and then going off to die.");
+                    packetFromClient.request ^= true; // inv direction
+                    enqueue_event(packetFromClient);
+                    break;
+                } else if (packetFromClient.type == GamePacket.CLIENT_NULL) {
+                    /* if code comes here, there is an error in the packet */
+                    System.err.println("ERROR: Null Client* packet!!");
+                    break;
                 }
 
                 System.out.println("Receiver thread for player " + packetFromClient.player_name + " got packet of type " + packetFromClient.type);
@@ -75,16 +86,11 @@ public class GameServerClientThread extends Thread {
 
                 enqueue_event(to_queue);
 
-                /* Sending an BROKER_NULL || BROKER_BYE means quit */
-                if (packetFromClient.type == GamePacket.CLIENT_NULL) {
-                    /* if code comes here, there is an error in the packet */
-                    System.err.println("ERROR: Null Client* packet!!");
-                    System.exit(-1);
-                    break;
-                }
+                
             }
             /* cleanup when client exits */
             fromClient.close();
+            toClient.close();
             socket.close();
 
         } catch (IOException e) {
@@ -99,7 +105,7 @@ public class GameServerClientThread extends Thread {
         /* Goes into the blocking queue and places this event in it. */
         try {
             /* Checks for certain packet types. Put anything pertaining
-             * to client join/drop into the JOIN queue. */
+             * to client join into the JOIN queue. */
             int ptype = p.type;
             if (ptype == GamePacket.LOCATION_REQ ||
                     ptype == GamePacket.LOCATION_RESP ||

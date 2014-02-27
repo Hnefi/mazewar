@@ -34,6 +34,9 @@ public class GamePacket implements Serializable {
     // this is only ever sent out and never received
     public static final int SET_RAND_SEED = 999;
 
+    // this is internal for signalling the server send threads to die
+    public static final int DIE = -9999999;
+
     // default message type
 	public int type = GamePacket.CLIENT_NULL;
 	
