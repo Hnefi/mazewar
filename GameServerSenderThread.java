@@ -24,6 +24,12 @@ public class GameServerSenderThread extends Thread {
 
             while ( isInterrupted()== false ) {
                 GamePacket to_send = my_send_buffer.takeFromBuf();
+                if (to_send.type == GamePacket.DIE) {
+                    // this is a signal that our connected player left the game, so don't send anything,
+                    // die, and clean up.
+                    System.out.println("Sender for player: " + to_send.player_name + " got signalled that it is to go off and die since the player left. Don't write to socket, instead clean up and die. ");
+                    break;
+                }
 
                 /* If we get something, then send that shiz */
                 System.out.println("Sender thread writing GamePacket of type " +to_send.type + " to player name " + to_send.player_name);
@@ -31,6 +37,7 @@ public class GameServerSenderThread extends Thread {
             }
             /* cleanup when client exits */
             System.out.println("Server sender thread exiting and closing sockets.....");
+            fromClient.close();
             toClient.close();
             socket.close();
 

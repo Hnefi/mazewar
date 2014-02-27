@@ -62,6 +62,24 @@ public class ServerArbiter extends Thread {
                     }
                     System.out.println("ServerArbiter re-woken....");
                     continue;
+                } else if (to_send.type == GamePacket.CLIENT_LEFT) {
+                    /* Do a few things: First, make a new special DIE packet and put that in the proper
+                     * buffer. Then sleep for a little while to be reasonably confident that the associated
+                     * sender thread died. Then remove that player map from the hashmap, and continue to
+                     * broadcast as normal. */
+                    GamePacket new_die = new GamePacket();
+                    new_die.type = GamePacket.DIE;
+
+                    System.out.println("Taking the buffer which corresponds to " + to_send.player_name + " out of the hashmap.");
+
+                    SendBuf buffer_of_dead_thread = map_of_buffers.remove(to_send.player_name);
+                    buffer_of_dead_thread.putInBuf(new_die);
+                    
+                    try {
+                        sleep(100);
+                    } catch (InterruptedException x) {
+                        interrupt();
+                    }
                 }
                 System.out.println("Client event_queue arbiter took a new object, and generated timestamp " + to_send.tstamp + " . Now placing it into all of the send buffers.");
                 /* Now get an iterator over the hashmap and place this
