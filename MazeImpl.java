@@ -285,6 +285,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
         }
        
         public synchronized void removeClient(Client client) {
+                Mazewar.consolePrintLn(client.getName() + " left!");
                 assert(client != null);
                 Object o = clientMap.remove(client);
                 assert(o instanceof Point);

@@ -129,13 +129,17 @@ class OutBufferThread extends Thread {
         }
         System.out.println("Sender thread wrote FCON packet.");
 
-        while (true){
+        while (!isInterrupted()){
             ClientQueueObject messageToServer = this.outBuf.takeFromBuf();
             assert(messageToServer != null);
+            if (messageToServer.eventType == ClientEvent.die){
+                break;
+            }
 
             //TODO: Format the ClientQueueObject as a GamePacket for the server
             //TODO: Replace this with a socket put
             GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
+
             try {
                 System.out.println("Sender writing packet with player name: " + packetToServer.player_name + " type: " + packetToServer.type);
                 toServ.writeObject(packetToServer);
@@ -144,6 +148,14 @@ class OutBufferThread extends Thread {
             }
             System.out.println("Sender thread wrote packet.");
         }
+        try{
+            toServ.close();
+            fromServ.close();
+            socket.close();
+        } catch (IOException x) {
+            System.err.println("Sender couldn't close sockets " + x.getMessage());
+        }
+        System.out.println("Sender thread dying! Bye!");
     }
 }
 
@@ -184,7 +196,7 @@ class InBufferThread extends Thread {
         System.out.println("Receiver thread got new Input stream successfully.");
 
         //Main Loop
-        while (!Thread.currentThread().isInterrupted()){
+        while (!isInterrupted()){
             //Get a packet from the server
             GamePacket packetFromServer = null;
             try {
@@ -211,7 +223,7 @@ class InBufferThread extends Thread {
 
             //Find the right queue to put the message into
             ClientBufferQueue bufferToClient = this.inBufMap.get(clientName);
-            
+ 
             if(messageFromServer.eventType == ClientEvent.join && bufferToClient == null){
                 System.out.println("InBufferThread creating new RemoteClient names " + clientName);
                 
@@ -224,7 +236,19 @@ class InBufferThread extends Thread {
                 //now forward the packet to the appropriate client!
                 bufferToClient.insertToBuf(messageFromServer);
             }
+
+            if (messageFromServer.eventType == ClientEvent.die){
+                break;
+            }
         }
+        try{
+            toServ.close();
+            fromServ.close();
+            my_sock.close();
+        } catch (IOException x) {
+            System.err.println("Receiver couldn't close sockets " + x.getMessage());
+        }
+        System.out.println("Receiver thread dying! Bye!");
     }
 }
 
@@ -312,6 +336,8 @@ public class ClientArbiter {
             packetType = GamePacket.CLIENT_JOINED;
         } else if (eType == ClientEvent.leave){
             packetType = GamePacket.CLIENT_LEFT;
+        } else if (eType == ClientEvent.die){
+            packetType = GamePacket.DIE;
         }
         return packetType;
     }
@@ -362,6 +388,9 @@ public class ClientArbiter {
                 break;
             case GamePacket.SET_RAND_SEED:
                 eType = ClientEvent.setRandomSeed;
+                break;
+            case GamePacket.DIE:
+                eType = ClientEvent.die;
                 break;
             default:
                 break;
@@ -539,6 +568,8 @@ public class ClientArbiter {
             ret = "LOCATION_COMPLETE";
         } else if (ce == ClientEvent.setRandomSeed) {
             ret = "SET_RANDOM_SEED";
+        } else if (ce == ClientEvent.die) {
+            ret = "DIE";
         }
         return ret;
     }
@@ -618,6 +649,8 @@ public class ClientArbiter {
             c.kill(target);
         } else if (ce == ClientEvent.leave) {
             c.leave();
+        } else if (ce == ClientEvent.die){
+            outBuffer.insertToBuf(new ClientQueueObject(ce, null, null, null, null));
         }
     }
 
