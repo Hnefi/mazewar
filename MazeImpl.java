@@ -299,18 +299,22 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 notifyClientRemove(client);
         }
 
-        public synchronized boolean clientCanFire(LocalClient client){
+        public synchronized boolean clientCanFire(Client client){
             return (!clientFired.contains(client));
         }
 
         public synchronized boolean clientFire(Client client) {
                 assert(client != null);
-                // If the client already has a projectile in play
-                // fail.
-                if(clientFired.contains(client)) {
-                        return false;
+                // If the client already has a projectile in play,
+                // it must be because of lag. Wait until that bullet
+                // stops existing.
+                while(!clientCanFire(client)){
+                    try {
+                        Thread.currentThread().sleep(200);
+                    } catch (InterruptedException x){
+                        Thread.currentThread().interrupt();
+                    }
                 }
-                
                 Point point = getClientPoint(client);
                 Direction d = getClientOrientation(client);
                 CellImpl cell = getCellImpl(point);
@@ -425,7 +429,9 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                                                 assert(o instanceof Projectile);
                                                 Projectile prj = (Projectile)o;
                                                 projectileMap.remove(prj);
-                                                clientFired.remove(prj.getOwner());
+                                                synchronized(clientFired){
+                                                    clientFired.remove(prj.getOwner());
+                                                }
                                         }
                                         deadPrj.clear();
                                 }
