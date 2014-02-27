@@ -112,10 +112,8 @@ class OutBufferThread extends Thread {
             toServ = new ObjectOutputStream(socket.getOutputStream());
             fromServ = new ObjectInputStream(socket.getInputStream());
         } catch (IOException x) {
-            System.err.println("Sender couldn't open streams.");
+            System.err.println("OutBufferThread couldn't open streams.");
         }
-
-        System.out.println("Sender trying to write FCON.");
 
         /* Send a FIRST_CONNECT so that the receiver thread can open its communication. */
         GamePacket fcon = new GamePacket();
@@ -125,9 +123,9 @@ class OutBufferThread extends Thread {
         try {
             toServ.writeObject(fcon);
         } catch (IOException x) {
-            System.err.println("Sender couldn't write FCON.");
+            System.err.println("OutBufferThread couldn't write FCON.");
         }
-        System.out.println("Sender thread wrote FCON packet.");
+        System.out.println("OutBufferThread wrote FCON packet.");
 
         while (!isInterrupted()){
             ClientQueueObject messageToServer = this.outBuf.takeFromBuf();
@@ -141,21 +139,19 @@ class OutBufferThread extends Thread {
             GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
 
             try {
-                System.out.println("Sender writing packet with player name: " + packetToServer.player_name + " type: " + packetToServer.type);
                 toServ.writeObject(packetToServer);
             } catch (IOException x) {
                 System.err.println("Sender couldn't write packet.");
             }
-            System.out.println("Sender thread wrote packet.");
         }
         try{
             toServ.close();
             fromServ.close();
             socket.close();
         } catch (IOException x) {
-            System.err.println("Sender couldn't close sockets " + x.getMessage());
+            System.err.println("OutBufferThread couldn't close sockets " + x.getMessage());
         }
-        System.out.println("Sender thread dying! Bye!");
+        System.out.println("OutBufferThread dying! Bye!");
     }
 }
 
@@ -179,10 +175,10 @@ class InBufferThread extends Thread {
         try {
             my_sock = socketListener.accept();
         } catch (IOException consumed) {
-            System.err.println("Receiver couldn't open socket.");
+            System.err.println("InBufferThread couldn't open socket.");
         }
 
-        System.out.println("Receiver thread got new socket.");
+        System.out.println("InBufferThread established socket connection.");
 
         //Now establish Object streams to/from the server
         ObjectOutputStream toServ = null;
@@ -191,9 +187,9 @@ class InBufferThread extends Thread {
             toServ = new ObjectOutputStream(my_sock.getOutputStream());
             fromServ = new ObjectInputStream(my_sock.getInputStream());
         } catch (IOException x) {
-            System.err.println("Receiver couldn't open input stream with message: " + x.getMessage());
+            System.err.println("InBufferThread couldn't open input stream with message: " + x.getMessage());
         }
-        System.out.println("Receiver thread got new Input stream successfully.");
+        System.out.println("InBufferThread got new Input stream successfully.");
 
         //Main Loop
         while (!isInterrupted()){
@@ -201,12 +197,11 @@ class InBufferThread extends Thread {
             GamePacket packetFromServer = null;
             try {
                 packetFromServer = (GamePacket) fromServ.readObject();
-                System.out.println("Receiver got packet with player name: " + packetFromServer.player_name + " type: " + packetFromServer.type);
             } catch (IOException x) {
-                System.err.println("Receiver missed reading packet!!");
+                System.err.println("InBufferThread missed reading packet!!");
                 continue;
             } catch (ClassNotFoundException cnf) {
-                System.err.println("Object doesn't match GamePacket.");
+                System.err.println("InBufferThread pulled out something that isn't a GamePacket.");
                 continue;
             }
             assert(packetFromServer != null);
@@ -217,7 +212,7 @@ class InBufferThread extends Thread {
 
             String clientName = messageFromServer.clientName;
             if (clientName == null && packetFromServer.type == GamePacket.SET_RAND_SEED){
-                //must be meant for the arbiter!
+                //rand_seed is sent at the start and meant for the arbiter!
                 clientName = "arbiter";
             }
 
@@ -225,7 +220,7 @@ class InBufferThread extends Thread {
             ClientBufferQueue bufferToClient = this.inBufMap.get(clientName);
  
             if(messageFromServer.eventType == ClientEvent.join && bufferToClient == null){
-                System.out.println("InBufferThread creating new RemoteClient names " + clientName);
+                System.out.println("InBufferThread creating new RemoteClient named " + clientName);
                 
                 //We've never seen this client before - must be a new remote client!
                 arbiter.createRemoteClientAndSendLocations(clientName);
@@ -246,9 +241,9 @@ class InBufferThread extends Thread {
             fromServ.close();
             my_sock.close();
         } catch (IOException x) {
-            System.err.println("Receiver couldn't close sockets " + x.getMessage());
+            System.err.println("InBufferThread couldn't close sockets " + x.getMessage());
         }
-        System.out.println("Receiver thread dying! Bye!");
+        System.out.println("InBufferThread thread dying! Bye!");
     }
 }
 
