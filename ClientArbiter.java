@@ -529,8 +529,16 @@ public class ClientArbiter {
             ret = "KILL";
         } else if (ce == ClientEvent.join) {
             ret = "JOIN";
+        } else if (ce == ClientEvent.leave) {
+            ret = "LEAVE";
+        } else if (ce == ClientEvent.locationResponse) {
+            ret = "LOCATION_RESPONSE";
         } else if (ce == ClientEvent.locationRequest) {
             ret = "LOCATION_REQUEST";
+        } else if (ce == ClientEvent.remoteLocation) {
+            ret = "LOCATION_COMPLETE";
+        } else if (ce == ClientEvent.setRandomSeed) {
+            ret = "SET_RANDOM_SEED";
         }
         return ret;
     }
@@ -608,6 +616,8 @@ public class ClientArbiter {
             assert(target != null);
 
             c.kill(target);
+        } else if (ce == ClientEvent.leave) {
+            c.leave();
         }
     }
 
