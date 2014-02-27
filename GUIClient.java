@@ -108,7 +108,8 @@ public class GUIClient extends LocalClient implements KeyListener {
                     //keep action as -1; we register fires by the keyCode
                 };
                 // If the user pressed Q, invoke the cleanup code and quit. 
-                if((keyPress == 'q') || (keyPress == 'Q')) {
+                if((keyPress == 'q') || (keyPress == 'Q')){
+                        arbiter.requestLocalClientEvent(this, ClientEvent.leave);
                         Mazewar.quit();
                 // Up-arrow moves forward.
                 } else if(action == FORWARD) {

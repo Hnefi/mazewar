@@ -219,7 +219,7 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 client.addClientListener(this);
                 arbiter.addClient(client);
                 notifyClientAdd(client);
-        }
+        }   
 
         public synchronized void randomSpawnClient(LocalClient client){
                 requestRandomSpawnClient(client);

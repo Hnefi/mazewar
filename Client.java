@@ -245,7 +245,22 @@ public abstract class Client {
             maze.killClient(this, target);
             notifyKill();
         }
+       
+        /**
+         * This {@link CLient} is now leaving!
+         */
+        protected void leave(){
+            assert(maze != null);
+            maze.removeClient(this);
+            notifyLeave();
+        } 
         
+        /** 
+         * Notify listeners that the client moved forward.
+         */
+        private void notifyLeave() {
+                notifyListeners(ClientEvent.leave);
+        }
         
         /** 
          * Notify listeners that the client moved forward.
