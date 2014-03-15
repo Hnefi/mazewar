@@ -52,12 +52,17 @@ public class Mazewar extends JFrame {
          * All implementations of the same protocol must use 
          * the same seed value, or your mazes will be different.
          */
-        private final int mazeSeed = 42;
+        private final int mazeSeed;
 
         /**
          * The {@link Maze} that the game uses.
          */
         private Maze maze = null;
+
+        /** 
+         * The {@link ClientArbiter} that the game uses
+         */
+        private ClientArbiter arbiter = null;
 
         /**
          * The {@link GUIClient} for the game.
@@ -111,21 +116,32 @@ public class Mazewar extends JFrame {
                 // Put any network clean-up code you might have here.
                 // (inform other implementations on the network that you have 
                 //  left, etc.)
-                
-
                 System.exit(0);
         }
        
         /** 
          * The place where all the pieces are put together. 
          */
-        public Mazewar() {
+        public Mazewar(String serverHost, int serverPort, int myPort) {
                 super("ECE419 Mazewar");
                 consolePrintLn("ECE419 Mazewar started!");
-                
+                // Throw up a dialog to get the GUIClient name.
+                String name = JOptionPane.showInputDialog("Enter your name");
+                if((name == null) || (name.length() == 0)) {
+                  Mazewar.quit();
+                }
+
+                // You may want to put your network initialization code somewhere in
+                // here.
+                arbiter = new ClientArbiter(name, serverHost, serverPort, myPort); //establish a connection to the server
+                mazeSeed = arbiter.getSeed(); //blocks until the server sends which seed to use
+    
                 // Create the maze
                 maze = new MazeImpl(new Point(mazeWidth, mazeHeight), mazeSeed);
                 assert(maze != null);
+
+                // Register the maze with the arbiter and vice-versa
+                arbiter.registerMaze(maze);
                 
                 // Have the ScoreTableModel listen to the maze to find
                 // out how to adjust scores.
@@ -133,30 +149,13 @@ public class Mazewar extends JFrame {
                 assert(scoreModel != null);
                 maze.addMazeListener(scoreModel);
                 
-                // Throw up a dialog to get the GUIClient name.
-                String name = JOptionPane.showInputDialog("Enter your name");
-                if((name == null) || (name.length() == 0)) {
-                  Mazewar.quit();
-                }
-                
-                // You may want to put your network initialization code somewhere in
-                // here.
-                
                 // Create the GUIClient and connect it to the KeyListener queue
+                System.out.println("creating client with name " + name);
                 guiClient = new GUIClient(name);
-                maze.addClient(guiClient);
+                arbiter.addLocalClientAndLoadRemoteClients(guiClient);
                 this.addKeyListener(guiClient);
-                
-                // Use braces to force constructors not to be called at the beginning of the
-                // constructor.
-                {
-                        maze.addClient(new RobotClient("Norby"));
-                        maze.addClient(new RobotClient("Robbie"));
-                        maze.addClient(new RobotClient("Clango"));
-                        maze.addClient(new RobotClient("Marvin"));
-                }
+                System.out.println("client creation successful!");
 
-                
                 // Create the panel that will display the maze.
                 overheadPanel = new OverheadMazePanel(maze, guiClient);
                 assert(overheadPanel != null);
@@ -214,6 +213,21 @@ public class Mazewar extends JFrame {
                 setVisible(true);
                 overheadPanel.repaint();
                 this.requestFocusInWindow();
+              
+                /*
+                 * NO RobotClient support for now 
+                System.out.println("Adding robots...");
+                
+                { 
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Norby"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Robbie"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Clango"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Marvin"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Blinky"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Prinky"));
+                    arbiter.addLocalClientAndLoadRemoteClients(new RobotClient("Shinky"));
+                }
+                */
         }
 
         
@@ -222,8 +236,18 @@ public class Mazewar extends JFrame {
          * @param args Command-line arguments.
          */
         public static void main(String args[]) {
-
-                /* Create the GUI */
-                new Mazewar();
+                String serverHost = null;
+                int serverPort = -1;
+                int myPort = -1;
+                if (args.length == 3){
+                    serverHost = args[0];
+                    serverPort = Integer.parseInt(args[1]);
+                    myPort = Integer.parseInt(args[2]);
+                    
+                    /* Create the GUI */
+                    new Mazewar(serverHost, serverPort, myPort);
+                } else {
+                    System.out.println("ERROR: Invalid args! java Mazewar <serverHost> <serverPort> <myPort>");
+                }
         }
 }

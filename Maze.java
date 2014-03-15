@@ -53,15 +53,52 @@ public abstract class Maze {
     /* Client functionality ************************************************/
     
     /** 
-     * Add a {@link Client} at random location in the {@link Maze}. 
+     * Add a {@link Client} to the {@link Maze}. NOTE: Does not spawn the client!!
      * @param client {@link Client} to be added to the {@link Maze}.
      */
     public abstract void addClient(Client client);
 
+    /**
+     * Randomly spawn a {@link LocalClient} into the maze.
+     */
+    public abstract void randomSpawnClient(LocalClient client);
+
+    /*
+     * Returns whether a given {@link Client} is allowed to fire right now.
+     */
+    public abstract boolean clientCanFire(Client client);
+
+    /*
+     * Returns whether a given {@link Client} is allowed to move forward right now.
+     */
+    public abstract boolean clientCanMoveForward(Client client);
+
+    /**
+     * Create a new {@link RemoteClient} with the given name.
+     */
+    public abstract RemoteClient createRemoteClient(String remoteName);
+
+    /**
+     * Spawn a {@link Client} at a given {@link DirectedPoint} in the {@link Maze}.
+     * @param client {@link Client} to be spawned
+     * @param dpoint {@link DirectedPoint} to place the client
+     * @return <code>false</code> on failure, <code>true</code> on success.
+     */
+    public abstract boolean spawnClient(Client client, DirectedPoint dpoint);
+
+    /**
+     * Spawn a {@link Client} at a given {@link DirectedPoint} in the {@link Maze}.
+     * @param client {@link Client} to be spawned
+     * @param dpoint {@link DirectedPoint} to place the client
+     * @return <code>false</code> on failure, <code>true</code> on success.
+     */
+    public abstract void killClient(Client source, Client target);
+
     /** 
      * Create a new {@link Projectile} from the specified {@link Client}
      * @param client {@link Client} that is firing.
-     * @return <code>false</code> on failure, <code>true</code> on success. */
+     * @return <code>false</code> on failure, <code>true</code> on success. 
+     */
     public abstract boolean clientFire(Client client);
     
     /** 
@@ -102,6 +139,8 @@ public abstract class Maze {
      * @return {@link Iterator} over clients in the {@link Maze}. 
      */
     public abstract Iterator getClients();
+
+
     
     /* Maze Listeners ******************************************************/
 
@@ -116,4 +155,8 @@ public abstract class Maze {
      */
     public abstract void removeMazeListener(MazeListener ml);
     
+
+    /* Arbiter functionality ***********************************************/
+    public abstract void addArbiter(ClientArbiter arb);
+    public abstract void removeArbiter();
 }

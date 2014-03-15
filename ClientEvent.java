@@ -29,13 +29,27 @@ public class ClientEvent {
         /**
          * Internal representations of events.
          */
+
+        //Gameplay events
         private static final int MOVE_FORWARD = 0;
         private static final int MOVE_BACKWARD = 1;
         private static final int TURN_LEFT = 2;
         private static final int TURN_RIGHT = 3;
         private static final int INVERT = 4;
         private static final int FIRE = 5;
-        
+        private static final int KILL = 6;
+        private static final int SPAWN = 7;
+
+        //Player join events
+        private static final int JOIN = 8;
+        private static final int LEAVE = 9;
+        private static final int LOCATION_REQUEST = 10;
+        private static final int LOCATION_RESPONSE = 11;
+        private static final int REMOTE_LOCATION = 12;
+        private static final int LOCATION_COMPLETE = 13;
+        private static final int SET_RANDOM_SEED = 14;
+        private static final int DIE = 15;
+ 
         /**
          * Default to 0, to be invalid.
          */
@@ -81,5 +95,53 @@ public class ClientEvent {
          */
         public static final ClientEvent fire = new ClientEvent(FIRE);
         
+        /**
+         * Generated when a {@link Client} spawns.
+         */
+        public static final ClientEvent kill = new ClientEvent(KILL);
+
+        /**
+         * Generated when a {@link Client} spawns.
+         */
+        public static final ClientEvent spawn = new ClientEvent(SPAWN);
+
+        /**
+         * Generated when a {@link Client} joins the session.
+         */
+        public static final ClientEvent join = new ClientEvent(JOIN);
+
+        /**
+         * Generated when a {@link Client} leaves the session.
+         */
+        public static final ClientEvent leave = new ClientEvent(LEAVE);
+
+        /**
+         * Generated when a {@link Client} is asked to report its location.
+         */
+        public static final ClientEvent locationRequest = new ClientEvent(LOCATION_REQUEST);
         
+        /**
+         * Generated when a {@link Client} reports its location.
+         */
+        public static final ClientEvent locationResponse = new ClientEvent(LOCATION_RESPONSE);
+        
+        /**
+         * Generated when a {@link Client} receives the location of a {@link RemoteClient}.
+         */
+        public static final ClientEvent remoteLocation = new ClientEvent(REMOTE_LOCATION);
+
+        /**
+         * Generated when a {@link Client} has received the locations for all other clients.
+         */
+        public static final ClientEvent locationComplete = new ClientEvent(LOCATION_COMPLETE);
+
+        /** 
+         * Generated when a {@link Client} receives notice of the random seed.
+         */
+        public static final ClientEvent setRandomSeed = new ClientEvent(SET_RANDOM_SEED);
+
+        /**
+         *  Generated when a {@link Client} is about to die!
+         */
+        public static final ClientEvent die = new ClientEvent(DIE);
 }

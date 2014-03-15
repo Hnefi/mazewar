@@ -1,80 +1,64 @@
 import java.io.Serializable;
  /**
- * BrokerPacket
+ * Game Packet that holds events and communication between game Server and various clients
  * ============
- * 
- * Packet format of the packets exchanged between the Broker and the Client
  * 
  */
 
+public class GamePacket implements Serializable {
+    /* Message types (can only really be moved/fired/died/spawned)
+     *  - can add joined/left later on
+     */
+    public static final int CLIENT_NULL = -1;
 
-/* inline class to describe host/port combo */
-class BrokerLocation implements Serializable {
-	public String  broker_host;
-	public Integer broker_port;
-	
-	/* constructor */
-	public BrokerLocation(String host, Integer port) {
-		this.broker_host = host;
-		this.broker_port = port;
-	}
-	
-	/* printable output */
-	public String toString() {
-		return " HOST: " + broker_host + " PORT: " + broker_port; 
-	}
-	
-}
+    // these go in the join q
+    public static final int LOCATION_REQ = 20;
+    public static final int LOCATION_RESP = 21;
+    public static final int REMOTE_LOC = 22;
+    public static final int ALL_LOC_DONE = 23;
 
-public class BrokerPacket implements Serializable {
+    // these go in the event q
+    public static final int FIRST_CONNECT = 100;
+    public static final int CLIENT_MOVED_FORWARD = 101;
+    public static final int CLIENT_MOVED_BACK = 102;
+    public static final int CLIENT_INVERT = 103;
+    public static final int CLIENT_TURN_L = 104;
+    public static final int CLIENT_TURN_R = 105;
+    public static final int CLIENT_FIRED = 300;
+    public static final int CLIENT_KILLED = 404;
+    public static final int CLIENT_SPAWNED = 42;
 
-	/* define constants */
-	/* for part 1/2/3 */
-	public static final int BROKER_NULL    = 0;
-	public static final int BROKER_REQUEST = 101;
-	public static final int BROKER_QUOTE   = 102;
-	public static final int BROKER_ERROR   = 103;
-	public static final int BROKER_FORWARD = 104;
-	public static final int BROKER_BYE     = 199;
+    public static final int CLIENT_JOINED = 202;
+    public static final int CLIENT_LEFT = 203;
+
+    // this is only ever sent out and never received
+    public static final int SET_RAND_SEED = 999;
+
+    // this is internal for signalling the server send threads to die
+    public static final int DIE = -9999999;
+
+    // default message type
+	public int type = GamePacket.CLIENT_NULL;
 	
-	/* for part 2/3 */
-	public static final int EXCHANGE_ADD    = 201;
-	public static final int EXCHANGE_UPDATE = 202;
-	public static final int EXCHANGE_REMOVE = 203;
-	public static final int EXCHANGE_REPLY  = 204;
-	
-	
-	/* for part 3 */
-	public static final int LOOKUP_REQUEST  = 301;
-	public static final int LOOKUP_REPLY    = 302;
-	public static final int LOOKUP_REGISTER = 303;
-	
-	/* error codes */
-	/* for part 2/3 */
-	public static final int ERROR_INVALID_SYMBOL   = -101;
-	public static final int ERROR_OUT_OF_RANGE     = -102;
-	public static final int ERROR_SYMBOL_EXISTS    = -103;
-	public static final int ERROR_INVALID_EXCHANGE = -104;
-	
-	/* message header */
-	/* for part 1/2/3 */
-	public int type = BrokerPacket.BROKER_NULL;
-	
-	/* request quote */
-	/* for part 1/2/3 */
-	public String symbol;
-	
-	/* quote */
-	/* for part 1/2/3 */
-	public Long quote;
-	
-	/* report errors */
-	/* for part 2/3 */
-	public int error_code;
-	
-	/* exchange lookup */
-	/* for part 3 */
-	public String         exchange;
-	public int            num_locations;
-	public BrokerLocation locations[];
+    // identifier for player
+	public String player_name = null;
+
+    // port this player is listening on
+    public int port = -1;
+
+    // identifier for the dead player
+    public String john_doe = null;
+
+    // packet direction
+    public boolean request;
+
+    // parent timestamp
+    public int tstamp = -1;
+
+    // rand seed
+    public int seed = -1;
+
+    // spawn point (NO FRIGGIN CAMPING)
+    public DirectedPoint location = null;
+
 }

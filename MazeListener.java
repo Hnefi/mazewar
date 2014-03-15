@@ -54,5 +54,12 @@ public interface MazeListener {
          * @param client Client that left.
          */
         void clientRemoved(Client client);
+
+        /**
+         * Notification that a client has spawned at a location
+         * @param client Client that spawned
+         * @param dPoint Point at which the client spawned
+         */
+        void clientSpawned(Client client, DirectedPoint dPoint);
         
 }

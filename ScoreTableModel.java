@@ -211,19 +211,21 @@ public class ScoreTableModel implements TableModel, MazeListener {
         public void clientKilled(Client source, Client target) {
                 assert(source != null);
                 assert(target != null);
-                Object o = clientMap.get(source);
-                assert(o instanceof ScoreWrapper);
-                scoreSet.remove(o);
-                ScoreWrapper s = (ScoreWrapper)o;
-                s.adjustScore(scoreAdjKill);
-                scoreSet.add(s);
-                o = clientMap.get(target);
-                assert(o instanceof ScoreWrapper);
-                scoreSet.remove(o);
-                s = (ScoreWrapper)o;
-                s.adjustScore(scoreAdjKilled);
-                scoreSet.add(s);
-                notifyListeners();
+                if (source.getName() != target.getName()){
+                    Object o = clientMap.get(source);
+                    assert(o instanceof ScoreWrapper);
+                    scoreSet.remove(o);
+                    ScoreWrapper s = (ScoreWrapper)o;
+                    s.adjustScore(scoreAdjKill);
+                    scoreSet.add(s);
+                    o = clientMap.get(target);
+                    assert(o instanceof ScoreWrapper);
+                    scoreSet.remove(o);
+                    s = (ScoreWrapper)o;
+                    s.adjustScore(scoreAdjKilled);
+                    scoreSet.add(s);
+                    notifyListeners();
+                }
         } 
 
         public void clientRemoved(Client client) {
@@ -233,6 +235,10 @@ public class ScoreTableModel implements TableModel, MazeListener {
                 scoreSet.remove(o);
                 clientMap.remove(o);
                 notifyListeners();
+        }
+
+        public void clientSpawned(Client client, DirectedPoint dPoint){
+                // Doesn't need to do anything
         }
 
         private void notifyListeners() {

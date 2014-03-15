@@ -108,23 +108,24 @@ public class GUIClient extends LocalClient implements KeyListener {
                     //keep action as -1; we register fires by the keyCode
                 };
                 // If the user pressed Q, invoke the cleanup code and quit. 
-                if((keyPress == 'q') || (keyPress == 'Q')) {
+                if((keyPress == 'q') || (keyPress == 'Q')){
+                        arbiter.requestLocalClientEvent(this, ClientEvent.leave);
                         Mazewar.quit();
                 // Up-arrow moves forward.
-                } else if(action == FORWARD) {
-                        forward();
+                } else if(action == FORWARD && maze.clientCanMoveForward(this)) {
+                        arbiter.requestLocalClientEvent(this, ClientEvent.moveForward);
                 // Down-arrow moves backward.
                 } else if(action == INVERT) {
-                        invert();
+                        arbiter.requestLocalClientEvent(this, ClientEvent.invert);
                 // Left-arrow turns left.
                 } else if(action == LEFT) {
-                        turnLeft();
+                        arbiter.requestLocalClientEvent(this, ClientEvent.turnLeft);
                 // Right-arrow turns right.
                 } else if(action == RIGHT) {
-                        turnRight();
+                        arbiter.requestLocalClientEvent(this, ClientEvent.turnRight);
                 // Spacebar fires.
-                } else if(keyCode == KeyEvent.VK_SPACE) {
-                        fire();
+                } else if(keyCode == KeyEvent.VK_SPACE && maze.clientCanFire(this)) {
+                        arbiter.requestLocalClientEvent(this, ClientEvent.fire);
                 }
         }
         

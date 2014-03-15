@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
 
+
 /**
  * An abstract class for clients in a maze. 
  * @author Geoffrey Washburn &lt;<a href="mailto:geoffw@cis.upenn.edu">geoffw@cis.upenn.edu</a>&gt;
@@ -50,7 +51,31 @@ public abstract class Client {
                 assert(maze != null);
                 this.maze = null;
         }
+
+         /**
+         * Register this {@link Client} as being connected to the server via
+         * the specified {@link ClientArbiter}.  
+         * Naturally a {@link Client} cannot be registered with
+         * more than one {@link ClientArbiter} at a time.
+         * @param arb The {@link ClientArbiter} which connects the 
+         * {@link Client} to the server.
+         */
+        public void registerArbiter(ClientArbiter arb) {
+                assert(arb != null);
+                assert(this.arbiter == null);
+                this.arbiter = arb;
+        }       
         
+        /**
+         * Inform the {@link Client} that the server connection via {@link ClientArbiter}
+         * is closed.  The {@link Client} must already be registered
+         * with a {@link Maze} before this can be called.
+         */
+        public void unregisterArbiter() {
+                assert(this.arbiter != null);
+                this.arbiter = null;
+        }
+
         /**
          * Get the name of this {@link Client}.
          * @return A {@link String} naming the {@link Client}.
@@ -103,6 +128,12 @@ public abstract class Client {
          * presently in a maze.
          */
         protected Maze maze = null;
+
+
+        /**
+         * The arbiter for governing communication with the game sever
+         */
+        protected ClientArbiter arbiter = null;
 
         /**
          * Maintain a set of listeners.
@@ -187,7 +218,49 @@ public abstract class Client {
                         return false;
                 }
         }
+
+        /**
+         * Spawn at a given {@link DirectedPoint} in the {@link Maze}
+         * @return <code>true</code> if spawn was successful, otherwise <code>false</code>.
+         */
+        protected boolean spawn(DirectedPoint p) {
+                assert(maze != null);
+                assert (p != null);
+    
+                if (maze.spawnClient(this, p)){
+                        notifySpawn();
+                        return true;
+                } else {
+                        return false;
+                }
+        }
+
+        /**
+         * This {@link Client} got a kill!
+         * @param target The {@link Client} which was killed by us.
+         */
+        protected void kill(Client target) {
+            assert(maze != null);
+            assert(target != null);
+            maze.killClient(this, target);
+            notifyKill();
+        }
+       
+        /**
+         * This {@link CLient} is now leaving!
+         */
+        protected void leave(){
+            assert(maze != null);
+            maze.removeClient(this);
+            notifyLeave();
+        } 
         
+        /** 
+         * Notify listeners that the client moved forward.
+         */
+        private void notifyLeave() {
+                notifyListeners(ClientEvent.leave);
+        }
         
         /** 
          * Notify listeners that the client moved forward.
@@ -230,7 +303,21 @@ public abstract class Client {
         private void notifyFire() {
                 notifyListeners(ClientEvent.fire);       
         }
-        
+
+        /**
+         * Notify listeners that the client spawned.
+         */
+        private void notifySpawn() {
+                notifyListeners(ClientEvent.spawn);
+        }
+       
+        /**
+         * Notify listeners that the client got a kill
+         */ 
+        private void notifyKill() {
+                notifyListeners(ClientEvent.kill);
+        }
+
         /**
          * Send a the specified {@link ClientEvent} to all registered listeners
          * @param ce Event to be sent.
