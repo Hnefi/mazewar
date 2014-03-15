@@ -111,11 +111,11 @@ public class GameServerClientThread extends Thread {
                     ptype == GamePacket.LOCATION_RESP ||
                     ptype == GamePacket.REMOTE_LOC ||
                     ptype == GamePacket.ALL_LOC_DONE) {
-                System.out.println("Putting object with player name  " + p.player_name + " and type " + p.type + " in join queue.");
+                //System.out.println("Putting object with player name  " + p.player_name + " and type " + p.type + " in join queue.");
                 this.join_queue.put(p);
                     }
             else {
-                System.out.println("Putting object with player name " + p.player_name + " and type " + p.type + " in event queue.");
+                //System.out.println("Putting object with player name " + p.player_name + " and type " + p.type + " in event queue.");
                 this.event_queue.put(p);
             }
         } catch (InterruptedException e) {

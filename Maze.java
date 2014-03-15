@@ -68,6 +68,11 @@ public abstract class Maze {
      */
     public abstract boolean clientCanFire(Client client);
 
+    /*
+     * Returns whether a given {@link Client} is allowed to move forward right now.
+     */
+    public abstract boolean clientCanMoveForward(Client client);
+
     /**
      * Create a new {@link RemoteClient} with the given name.
      */

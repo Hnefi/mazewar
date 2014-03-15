@@ -112,7 +112,7 @@ public class GUIClient extends LocalClient implements KeyListener {
                         arbiter.requestLocalClientEvent(this, ClientEvent.leave);
                         Mazewar.quit();
                 // Up-arrow moves forward.
-                } else if(action == FORWARD) {
+                } else if(action == FORWARD && maze.clientCanMoveForward(this)) {
                         arbiter.requestLocalClientEvent(this, ClientEvent.moveForward);
                 // Down-arrow moves backward.
                 } else if(action == INVERT) {

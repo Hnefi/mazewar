@@ -304,6 +304,26 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
             return (!clientFired.contains(client));
         }
 
+        public synchronized boolean clientCanMoveForward(Client client){
+                Point point = getClientPoint(client);
+                Direction d = getClientOrientation(client);
+                CellImpl cell = getCellImpl(point);
+                
+                /* Check that you can move in that direction */
+                if(cell.isWall(d)) {
+                        return false;
+                }
+                
+                DirectedPoint newPoint = new DirectedPoint(point.move(d), d);
+                /* Is the point withint the bounds of maze? */
+                assert(checkBounds(newPoint));
+                
+                CellImpl newCell = getCellImpl(newPoint);
+                Object contents = newCell.getContents();
+                //There's nothing in that cell, so you can move forward!
+                return (contents == null);
+        }
+
         public synchronized boolean clientFire(Client client) {
                 assert(client != null);
                 // If the client already has a projectile in play,
