@@ -2,14 +2,6 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
-class AddressPortPair {
-    public String addr = null;
-    public int port = -1;
-    public AddressPortPair(String inAddr, int inPort){
-        this.addr = inAddr;
-        this.port = inPort;
-    }
-}
 
 /* Simple backend database that stores a hash of all connected clients. Supports
  * add and remove methods (it's obvious why). */

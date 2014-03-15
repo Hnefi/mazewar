@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.util.*;
  /**
  * Game Packet that holds events and communication between game Server and various clients
  * ============
@@ -37,6 +38,10 @@ public class GamePacket implements Serializable {
     // this is internal for signalling the server send threads to die
     public static final int DIE = -9999999;
 
+    // this is a type only used by the lookup server to reply to
+    // new client joins
+    public static final int ADDR_PORT_LIST = 400;
+
     // default message type
 	public int type = GamePacket.CLIENT_NULL;
 	
@@ -60,5 +65,7 @@ public class GamePacket implements Serializable {
 
     // spawn point (NO FRIGGIN CAMPING)
     public DirectedPoint location = null;
-
+    
+    // this is a list of APP's that are used for joining the game
+    public ArrayList<AddressPortPair> list_of_others = null;
 }

@@ -1,6 +1,10 @@
 ClientArbiter.class : ClientArbiter.java
 Client.class : ClientArbiter.java
 Client.class : ClientArbiter.class
+Client.class: LookupServer.java
+Client.class: LookupServer.class
+Client.class: LookupServerHandlerThread.java
+Client.class: LookupServerHandlerThread.class
 MazeImpl.class : ClientArbiter.java
 MazeImpl.class : ClientArbiter.class
 GUIClient.class : ClientArbiter.java
@@ -42,6 +46,18 @@ ServerJoinDropThread.class: ServerJoinDropThread.java
 SendBuf.class: SendBuf.java
 
 ServerArbiter.class: ServerArbiter.java
+
+LookupServer.class: LookupServer.java
+LookupServer.class: DNS_DB.java
+LookupServer.class: DNS_DB.class
+LookupServerHandlerThread.class: LookupServerHandlerThread.java
+LookupServerHandlerThread.class: DNS_DB.java
+LookupServerHandlerThread.class: DNS_DB.class
+DNS_DB.class: DNS_DB.java
+DNS_DB.class: AddressPortPair.class
+DNS_DB.class: AddressPortPair.java
+
+AddressPortPair.class: AddressPortPair.java
 
 ServerTester.class: ServerTester.java
 JoinTester.class: JoinTester.java
