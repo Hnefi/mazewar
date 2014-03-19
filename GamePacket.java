@@ -68,4 +68,7 @@ public class GamePacket implements Serializable {
     
     // this is a list of APP's that are used for joining the game
     public ArrayList<AddressPortPair> list_of_others = null;
+
+    // this is the player's id number (only used upon first reply from lookup server)
+    public int pid = -1;
 }

@@ -7,6 +7,7 @@ public class LookupServer {
         ServerSocket serverSocket = null;
         
         boolean listening = true;
+        int player_id = 0;
 
         try {
         	if(args.length == 1) {
@@ -23,7 +24,7 @@ public class LookupServer {
         DNS_DB registry_db = new DNS_DB();
 
         while (listening) {
-        	new Thread(new LookupServerHandlerThread(serverSocket.accept(), registry_db)).start();
+        	new Thread(new LookupServerHandlerThread(serverSocket.accept(), registry_db,++player_id)).start();
         }
 
         serverSocket.close();
