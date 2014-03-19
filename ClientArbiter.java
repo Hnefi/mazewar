@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -18,12 +19,15 @@ class ClientQueueObject {
     public final DirectedPoint dPoint;
     public final Integer seed;
 
-    public ClientQueueObject(ClientEvent eType, String cName, String tName, DirectedPoint p, Integer s){
+    public Integer lClock;
+
+    public ClientQueueObject(ClientEvent eType, String cName, String tName, DirectedPoint p, Integer s, Integer c){
         this.eventType = eType;
         this.clientName = cName;
         this.targetName = tName;
         this.dPoint = p;
         this.seed = s;
+        this.lClock = c;
     }
 }
 
@@ -92,13 +96,15 @@ class OutBufferThread extends Thread {
     private final Socket socket;
     private final String cName;
     private final int port;
+    private final ClientArbiter arbiter;
 
-    public OutBufferThread(ClientBufferQueue oBuf, String clientName, Socket s, int myPort){
+    public OutBufferThread(ClientBufferQueue oBuf, String clientName, Socket s, int myPort, ClientArbiter arb){
         super("OutBufferThread");
         this.outBuf = oBuf;
         this.socket = s;
         this.cName = clientName;
         this.port = myPort;
+        this.arbiter = arb;
         this.start();
     }
 
@@ -134,10 +140,13 @@ class OutBufferThread extends Thread {
                 break;
             }
 
-            //TODO: Format the ClientQueueObject as a GamePacket for the server
-            //TODO: Replace this with a socket put
+            //Turn the message into a GamePacket and send to the socket
             GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
 
+            //We get and increment the Lamport clock on every packet we send
+            packetToServer.tstamp = arbiter.getAndIncrementLamportClock();
+
+            //TODO: Replace this with an iteration over all sockets we know about
             try {
                 toServ.writeObject(packetToServer);
             } catch (IOException x) {
@@ -209,6 +218,7 @@ class InBufferThread extends Thread {
             //Convert it to a Client-friendly message
             ClientQueueObject messageFromServer = ClientArbiter.getClientQFromPacket(packetFromServer);
             assert(messageFromServer != null);
+            messageFromServer.lClock = arbiter.getMaxLamportClockAndIncrement(messageFromServer.lClock); 
 
             String clientName = messageFromServer.clientName;
             if (clientName == null && packetFromServer.type == GamePacket.SET_RAND_SEED){
@@ -218,7 +228,7 @@ class InBufferThread extends Thread {
 
             //Find the right queue to put the message into
             ClientBufferQueue bufferToClient = this.inBufMap.get(clientName);
- 
+
             if(messageFromServer.eventType == ClientEvent.join && bufferToClient == null){
                 System.out.println("InBufferThread creating new RemoteClient named " + clientName);
                 
@@ -269,6 +279,8 @@ public class ClientArbiter {
     private Maze maze;
     private final int seed;
 
+    private final AtomicInteger lamportClock;
+
     public ClientArbiter(String myClientName, String serverHost, int serverPort, int myPort){
         clientNameMap = new ConcurrentHashMap<String, Client>();
         threadWaitingOnMap = new ConcurrentHashMap<Long, ClientEvent>();
@@ -291,15 +303,18 @@ public class ClientArbiter {
         }
 
         //TODO: Pass the socket to the buffer threads
-        outThread = new OutBufferThread(outBuffer, myClientName, toServerSocket, myPort);
+        outThread = new OutBufferThread(outBuffer, myClientName, toServerSocket, myPort, this);
         inThread = new InBufferThread(fromServerListener, inBufferMap, this);
 
         ClientQueueObject seedMessage = arbiterInBuffer.takeFromBuf();
         assert(seedMessage.eventType == ClientEvent.setRandomSeed);
         seed = seedMessage.seed;
+
+        lamportClock = new AtomicInteger(0);
         
         maze = null;
     }
+
 
     private static int getPacketTypeFromClientEvent(ClientEvent eType){
         int packetType = GamePacket.CLIENT_NULL;
@@ -401,6 +416,7 @@ public class ClientArbiter {
         packet.player_name = qObject.clientName;
         packet.location = qObject.dPoint;
         packet.john_doe = qObject.targetName;
+        packet.tstamp = qObject.lClock;
         return packet;
     }
 
@@ -410,7 +426,7 @@ public class ClientArbiter {
         //First find out what type of event we're dealing with
         ClientEvent eType = getClientEventFromPacketType(packet.type);
         DirectedPoint dPoint = packet.location;
-        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed));
+        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed, packet.tstamp));
     }
 
     public synchronized int getSeed(){
@@ -481,8 +497,8 @@ public class ClientArbiter {
         }
         assert(dPoint != null);
 
-        //write it to the output buffer for the outThread to find
-        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationResponse, clientName, null, dPoint, null));
+        //write it to the output buffer for the outThread to find; let it take care of the Lamport Clock setting
+        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationResponse, clientName, null, dPoint, null, 0));
     }
 
     public void createRemoteClientAndSendLocations(String remoteClientName){
@@ -592,8 +608,8 @@ public class ClientArbiter {
             assert(targetName != null);
         }
 
-        //Write the request to the output buffer
-        outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p, null));
+        //Write the request to the output buffer; let the output thread care about the Lclock setting
+        outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p, null, 0));
 
         //Record that this thread is currently waiting for a reply
         Long curThreadId = Thread.currentThread().getId();
@@ -658,7 +674,7 @@ public class ClientArbiter {
         } else if (ce == ClientEvent.leave) {
             c.leave();
         } else if (ce == ClientEvent.die){
-            outBuffer.insertToBuf(new ClientQueueObject(ce, null, null, null, null));
+            outBuffer.insertToBuf(new ClientQueueObject(ce, null, null, null, null, 0));
         }
     }
 
@@ -679,5 +695,17 @@ public class ClientArbiter {
         assert(m != null);
         this.maze = m;
         maze.addArbiter(this);
+    }
+
+    public synchronized int getAndIncrementLamportClock(){
+        return lamportClock.getAndIncrement();
+    }
+
+    public synchronized int getMaxLamportClockAndIncrement(int comp){
+        int old = lamportClock.get();
+        if (comp > old){
+            lamportClock.set(comp);
+        }
+        return getAndIncrementLamportClock();
     }
 }
