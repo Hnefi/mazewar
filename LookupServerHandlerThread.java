@@ -20,7 +20,7 @@ public class LookupServerHandlerThread implements Runnable {
 
         boolean gotByePacket = false;
         boolean registered_broker = false;
-        String registeredExchange = null;
+        String player_name = null;
 
         try {
             /* stream to read from client */
@@ -39,10 +39,11 @@ public class LookupServerHandlerThread implements Runnable {
                     send_packet = true;
                     String newClientAddr = socket.getInetAddress().toString();
                     int newClientPort = packetFromClient.port;
-                    registry_db.register_name_and_dest(packetFromClient.player_name, newClientAddr, newClientPort);
+                    player_name = packetFromClient.player_name;
+                    registry_db.register_name_and_dest(player_name, newClientAddr, newClientPort);
 
                     /* Need to get all other locations and reply to client. */
-                    String this_client = packetFromClient.player_name;
+                    String this_client = player_name;
                     AddressPortPair this_APP = registry_db.get_socket(this_client);
                     String this_host = this_APP.addr;
                     int this_port = this_APP.port;
@@ -60,6 +61,7 @@ public class LookupServerHandlerThread implements Runnable {
                 }
                 /* Use this code to handle client leave messages. */
                 if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.CLIENT_LEFT) {
+                    player_name = packetFromClient.player_name; 
                     gotByePacket = true;
                     break;
                 }
@@ -84,8 +86,8 @@ public class LookupServerHandlerThread implements Runnable {
                 e.printStackTrace();
         }
 
-        if (registeredExchange != null){
-            registry_db.remove_exchange(registeredExchange);
+        if (player_name != null && gotByePacket){
+            registry_db.remove_exchange(player_name);
         }
         System.out.println("Thread exiting for client "+client_addr);
     }
