@@ -16,10 +16,9 @@ public class Token {
     public int num_players = 0; // this is different than num_machines because of robots
 
     /* Default constructor */ 
-    @Override
-    Token() {
-        this.new_events = ArrayDeque<GamePacket>();
-        this.existing_locs = ArrayDeque<GamePacket>();
+    public Token() {
+        this.new_events = new ArrayDeque<GamePacket>();
+        this.existing_locs = new ArrayDeque<GamePacket>();
     }
 
     // push and pop methods for queues
@@ -41,10 +40,9 @@ public class Token {
     /* Setter method for re-initializing the events queue to the passed in
      * data structure.
      */
-    public boolean overWriteEventQueue(AbstractCollection<GamePacket>new_q) {
+    public void overWriteEventQueue(AbstractCollection<GamePacket>new_q) {
         ArrayDeque<GamePacket> overwrite_with_this = new ArrayDeque<GamePacket>(new_q);
         this.new_events = overwrite_with_this; //garbage collect the old queue
     }
-
 }
 

@@ -1,10 +1,14 @@
 ClientArbiter.class : ClientArbiter.java
+ClientArbiter.class: Token.class
+ClientArbiter.class: Token.java
 Client.class : ClientArbiter.java
 Client.class : ClientArbiter.class
 Client.class: LookupServer.java
 Client.class: LookupServer.class
 Client.class: LookupServerHandlerThread.java
 Client.class: LookupServerHandlerThread.class
+Client.class: Token.java
+Client.class: Token.class
 MazeImpl.class : ClientArbiter.java
 MazeImpl.class : ClientArbiter.class
 GUIClient.class : ClientArbiter.java
@@ -58,6 +62,7 @@ DNS_DB.class: AddressPortPair.class
 DNS_DB.class: AddressPortPair.java
 
 AddressPortPair.class: AddressPortPair.java
+Token.class: Token.java
 
 ServerTester.class: ServerTester.java
 JoinTester.class: JoinTester.java

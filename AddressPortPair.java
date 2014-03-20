@@ -1,4 +1,6 @@
 import java.util.*;
+import java.io.*;
+import java.net.*;
 
 public class AddressPortPair {
     public InetAddress addr = null;
@@ -8,14 +10,13 @@ public class AddressPortPair {
         this.port = inPort;
     }
 
-    @Override
-    public boolean equals(Object obj) {
+    public boolean equals(AddressPortPair obj) {
         if (this == obj) return true;
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
         /* Now compare addresses and ports */
         if (this.addr.equals(obj.addr) 
-            && this.port = obj.port) {
+            && this.port == obj.port) {
             return true;
             }
         return false;

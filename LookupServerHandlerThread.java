@@ -6,14 +6,12 @@ import java.util.*;
 public class LookupServerHandlerThread implements Runnable {
     private Socket socket = null;
     private DNS_DB registry_db = null;
-    private EntryPointClient entry_point = null;
     private String client_addr = null;
     private final int player_id;
 
-    public LookupServerHandlerThread(Socket socket, DNS_DB reg_db,EntryPointClient ep,int pid) {
+    public LookupServerHandlerThread(Socket socket, DNS_DB reg_db,int pid) {
         this.socket = socket;
         this.registry_db = reg_db;
-        this.entry_point = ep;
         this.player_id = pid;
         System.out.println("Created new Thread to handle client");
         this.client_addr = this.socket.getRemoteSocketAddress().toString();
@@ -41,14 +39,17 @@ public class LookupServerHandlerThread implements Runnable {
                 boolean send_packet = false;
                 if(packetFromClient.type == GamePacket.FIRST_CONNECT) {
                     send_packet = true;
-                    String newClientAddr = socket.getInetAddress();
+                    InetAddress newClientAddr = socket.getInetAddress();
+                    // client listens on this port
                     int newClientPort = packetFromClient.port;
-                    registry_db.register_name_and_dest(newClientAddr, newClientPort);
+                    AddressPortPair new_guy = new AddressPortPair(newClientAddr,newClientPort);
+                    registry_db.register_name_and_dest(new_guy);
 
-                    /* Now need to get the AddressPortPair which the token ring entry point client is listening on. This is 
-                     * supported from the LookupServer.
-                     */
+                    /* Now need to send back the list of all other players */
 
+                    ArrayList<AddressPortPair> ret_list = registry_db.get_clients_except_for(new_guy);
+                    
+                    packetToClient.list_of_others = ret_list;
                     packetToClient.pid = this.player_id;
                     packetToClient.request = false;
                 } 
@@ -61,7 +62,9 @@ public class LookupServerHandlerThread implements Runnable {
                 }
                 /* Use this code to handle client leave messages. */
                 if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.CLIENT_LEFT) {
-                    player_name = packetFromClient.player_name; 
+                    /* Unregister from lookup server. */
+                    InetAddress leaving_inet = socket.getInetAddress();
+                    registry_db.remove_client(leaving_inet);    
                     gotByePacket = true;
                     break;
                 }
@@ -86,9 +89,6 @@ public class LookupServerHandlerThread implements Runnable {
                 e.printStackTrace();
         }
 
-        if (player_name != null && gotByePacket){
-            registry_db.remove_exchange(player_name);
-        }
         System.out.println("Thread exiting for client "+client_addr);
     }
 }

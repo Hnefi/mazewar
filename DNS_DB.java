@@ -11,47 +11,34 @@ public class DNS_DB {
 
     public DNS_DB(){
         this.registry = new ArrayList<AddressPortPair>();
-   }
+    }
 
-    public ArrayList<AddressPortPair> get_all_address_except_for(String excludeAddr, int excludePort){
-        /*used for forwarding; given a registered IP address & port, return all sockets except 
-        that one in the registry*/
-        ArrayList<AddressPortPair> other_sockets = new ArrayList<AddressPortPair>();
+    public ArrayList<AddressPortPair> get_clients_except_for(AddressPortPair me) {
+        // return new instance of clients (except this one)
+        ArrayList<AddressPortPair>ret_list = new ArrayList<AddressPortPair>(this.registry);
+        ret_list.remove(me);
+        return ret_list;
+    }
 
-        boolean excluded_self = false;
-        Enumeration<String> enumKey = registry.keys();
-        while (enumKey.hasMoreElements()){
-            String name = enumKey.nextElement();
-            AddressPortPair broker = registry.get(name);
-
-            if (broker.addr.equals(excludeAddr)
-                && broker.port == excludePort){
-                excluded_self = true;
-            } else {
-                other_sockets.add(broker);
+    public void register_name_and_dest(AddressPortPair newguy) {
+        this.registry.add(newguy);
+    }
+    
+    /* This takes an InetAddress since it's not specific to
+     * the socket/port pair (since that is a client listening
+     * port used for new connections).
+     */
+    public boolean remove_client(InetAddress to_remove){
+        // get iterator and remove from the arrayList
+        boolean removed = false;
+        Iterator<AddressPortPair> it = registry.iterator();
+        while (it.hasNext()) {
+            if (it.next().addr.equals(to_remove)) {
+                it.remove();
+                removed = true;
+                break; // since this inetAddr is unique.
             }
         }
-        if (!excluded_self){
-            System.out.println("IP address "+excludeAddr+" requested other IPs without registering!");
-            return null;
-        }
-        return other_sockets;
-    }
-
-    public void register_name_and_dest(InetAddress addr, int port){
-        this.registry.add(new AddressPortPair(addr, port));
-    }
-
-    public boolean remove_exchange(AddressPortPair to_remove){
-        return this.registry.remove(to_remove);
-        // overrode AddressPortPair equality so this is supported
-    }
-
-    public AddressPortPair get_socket(String name){
-        AddressPortPair ret = null;
-        if (this.registry.containsKey(name)){
-            ret = this.registry.get(name);
-        }
-        return ret;
+        return removed;
     }
 }
