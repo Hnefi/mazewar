@@ -6,12 +6,14 @@ import java.util.*;
 public class LookupServerHandlerThread implements Runnable {
     private Socket socket = null;
     private DNS_DB registry_db = null;
+    private EntryPointClient entry_point = null;
     private String client_addr = null;
     private final int player_id;
 
-    public LookupServerHandlerThread(Socket socket, DNS_DB reg_db,int pid) {
+    public LookupServerHandlerThread(Socket socket, DNS_DB reg_db,EntryPointClient ep,int pid) {
         this.socket = socket;
         this.registry_db = reg_db;
+        this.entry_point = ep;
         this.player_id = pid;
         System.out.println("Created new Thread to handle client");
         this.client_addr = this.socket.getRemoteSocketAddress().toString();
@@ -39,19 +41,14 @@ public class LookupServerHandlerThread implements Runnable {
                 boolean send_packet = false;
                 if(packetFromClient.type == GamePacket.FIRST_CONNECT) {
                     send_packet = true;
-                    String newClientAddr = socket.getInetAddress().toString();
+                    String newClientAddr = socket.getInetAddress();
                     int newClientPort = packetFromClient.port;
-                    player_name = packetFromClient.player_name;
-                    registry_db.register_name_and_dest(player_name, newClientAddr, newClientPort);
+                    registry_db.register_name_and_dest(newClientAddr, newClientPort);
 
-                    /* Need to get all other locations and reply to client. */
-                    String this_client = player_name;
-                    AddressPortPair this_APP = registry_db.get_socket(this_client);
-                    String this_host = this_APP.addr;
-                    int this_port = this_APP.port;
-                    ArrayList<AddressPortPair> other_players = registry_db.get_all_address_except_for(this_host,this_port);
-                    packetToClient.list_of_others = other_players;
-                    packetToClient.type = GamePacket.ADDR_PORT_LIST;
+                    /* Now need to get the AddressPortPair which the token ring entry point client is listening on. This is 
+                     * supported from the LookupServer.
+                     */
+
                     packetToClient.pid = this.player_id;
                     packetToClient.request = false;
                 } 

@@ -3,13 +3,14 @@ import java.io.*;
 import java.util.*;
 
 
-/* Simple backend database that stores a hash of all connected clients. Supports
- * add and remove methods (it's obvious why). */
+/* Simple backend database that stores a list of all connected clients. Supports
+ * add and remove methods (it's obvious why). 
+ */
 public class DNS_DB {
-    private Hashtable<String,AddressPortPair> registry = null;
+    private ArrayList<AddressPortPair> registry = null;
 
     public DNS_DB(){
-        this.registry = new Hashtable<String,AddressPortPair>();
+        this.registry = new ArrayList<AddressPortPair>();
    }
 
     public ArrayList<AddressPortPair> get_all_address_except_for(String excludeAddr, int excludePort){
@@ -37,12 +38,13 @@ public class DNS_DB {
         return other_sockets;
     }
 
-    public void register_name_and_dest(String name, String addr, int port){
-        this.registry.put(name, new AddressPortPair(addr.substring(1), port));
+    public void register_name_and_dest(InetAddress addr, int port){
+        this.registry.add(new AddressPortPair(addr, port));
     }
 
-    public void remove_exchange(String name){
-        this.registry.remove(name);
+    public boolean remove_exchange(AddressPortPair to_remove){
+        return this.registry.remove(to_remove);
+        // overrode AddressPortPair equality so this is supported
     }
 
     public AddressPortPair get_socket(String name){
