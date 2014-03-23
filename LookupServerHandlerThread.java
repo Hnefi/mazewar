@@ -37,7 +37,7 @@ public class LookupServerHandlerThread implements Runnable {
                 GamePacket packetToClient = new GamePacket();
 
                 boolean send_packet = false;
-                if(packetFromClient.type == GamePacket.FIRST_CONNECT) {
+                if(packetFromClient.type == GamePacket.RING_JOIN) {
                     send_packet = true;
                     InetAddress newClientAddr = socket.getInetAddress();
                     // client listens on this port
@@ -51,7 +51,6 @@ public class LookupServerHandlerThread implements Runnable {
                     
                     packetToClient.list_of_others = ret_list;
                     packetToClient.pid = this.player_id;
-                    packetToClient.request = false;
                 } 
                 if (send_packet){
                     /* send reply back to client */
@@ -61,7 +60,7 @@ public class LookupServerHandlerThread implements Runnable {
                     continue;
                 }
                 /* Use this code to handle client leave messages. */
-                if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.CLIENT_LEFT) {
+                if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.RING_LEAVE) {
                     /* Unregister from lookup server. */
                     InetAddress leaving_inet = socket.getInetAddress();
                     registry_db.remove_client(leaving_inet);    

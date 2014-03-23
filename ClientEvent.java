@@ -43,13 +43,11 @@ public class ClientEvent {
         //Player join events
         private static final int JOIN = 8;
         private static final int LEAVE = 9;
-        private static final int LOCATION_REQUEST = 10;
-        private static final int LOCATION_RESPONSE = 11;
         private static final int REMOTE_LOCATION = 12;
-        private static final int LOCATION_COMPLETE = 13;
         private static final int SET_RANDOM_SEED = 14;
-        private static final int DIE = 15;
  
+        //missed opportunities...
+        private static final int NOP = 16;
         /**
          * Default to 0, to be invalid.
          */
@@ -116,32 +114,17 @@ public class ClientEvent {
         public static final ClientEvent leave = new ClientEvent(LEAVE);
 
         /**
-         * Generated when a {@link Client} is asked to report its location.
-         */
-        public static final ClientEvent locationRequest = new ClientEvent(LOCATION_REQUEST);
-        
-        /**
-         * Generated when a {@link Client} reports its location.
-         */
-        public static final ClientEvent locationResponse = new ClientEvent(LOCATION_RESPONSE);
-        
-        /**
          * Generated when a {@link Client} receives the location of a {@link RemoteClient}.
          */
         public static final ClientEvent remoteLocation = new ClientEvent(REMOTE_LOCATION);
-
-        /**
-         * Generated when a {@link Client} has received the locations for all other clients.
-         */
-        public static final ClientEvent locationComplete = new ClientEvent(LOCATION_COMPLETE);
 
         /** 
          * Generated when a {@link Client} receives notice of the random seed.
          */
         public static final ClientEvent setRandomSeed = new ClientEvent(SET_RANDOM_SEED);
-
+        
         /**
-         *  Generated when a {@link Client} is about to die!
+         *  Generated when a {@link Client} hasn't done anything!
          */
-        public static final ClientEvent die = new ClientEvent(DIE);
+        public static final ClientEvent nop = new ClientEvent(NOP);
 }

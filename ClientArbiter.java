@@ -5,12 +5,15 @@ import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayDeque;
 
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.IOException;
+
+/*START HELPER_CLASSES*/
 
 class ClientQueueObject {
     public final ClientEvent eventType;
@@ -19,15 +22,12 @@ class ClientQueueObject {
     public final DirectedPoint dPoint;
     public final Integer seed;
 
-    public Integer lClock;
-
-    public ClientQueueObject(ClientEvent eType, String cName, String tName, DirectedPoint p, Integer s, Integer c){
+    public ClientQueueObject(ClientEvent eType, String cName, String tName, DirectedPoint p, Integer s){
         this.eventType = eType;
         this.clientName = cName;
         this.targetName = tName;
         this.dPoint = p;
         this.seed = s;
-        this.lClock = c;
     }
 }
 
@@ -58,154 +58,87 @@ class ClientBufferQueue {
         }
         return ret; 
     }
+
+    public ClientQueueObject takeFromBufNonBlocking(){
+        //returns a null object if the buffer is empty instead of blocking until it's filled
+        ClientQueueObject ret = null;
+        if (!inBuf.isEmpty()){
+            ret = takeFromBuf();
+        }   
+        return ret;
+    }
 }
 
-class ClientSocketQueue {
-    private final int SOCKETBUFFERSIZE = 30;
-    private final ArrayBlockingQueue<GamePacket> buffer;
-
-    public ClientSocketQueue(){
-        this.buffer = new ArrayBlockingQueue<GamePacket>(SOCKETBUFFERSIZE);
+class IncomingPacketObject {
+    public Socket socket = null;
+    public Token token = null;
+    
+    public IncomingPacketObject(Token t, Socket s){
+        this.socket = s;
+        this.token = t;
     }
-   
-    public void insertToBuf(GamePacket entry){
-        try {
-            buffer.put(entry);
-        } catch (InterruptedException x) {
-            Thread.currentThread().interrupt(); // propagate
-        }
+}
+
+class TokenHandlerQueue {
+    private final int BUFFERSIZE = 3;
+    private final ArrayBlockingQueue<IncomingPacketObject> buf;
+
+    public TokenHandlerQueue(){
+        this.buf = new ArrayBlockingQueue<IncomingPacketObject>(BUFFERSIZE); 
     }
     
-    public GamePacket takeFromBuf(){
-        GamePacket ret = null;   
+    public void insertToBuf(IncomingPacketObject entry){
         try {
-            ret = buffer.take(); // blocking
-        } catch (InterruptedException x) {
-            Thread.currentThread().interrupt(); // propagate
+            buf.put(entry);
+        } catch (InterruptedException x){
+            Thread.currentThread().interrupt(); //propagate
         }
-        return ret; 
+    }
+
+    public IncomingPacketObject takeFromBuf(){
+        IncomingPacketObject ret = null;
+        try {
+            ret = buf.take();
+        } catch (InterruptedException x){
+            Thread.currentThread().interrupt();
+        }
+        return ret;
     }
 }
 
+/*END HELPER CLASSES*/
 
-//TODO: Split this class into two, each using a socket to communicate with the server
-class OutBufferThread extends Thread {
-    private final ClientBufferQueue outBuf;
+/*START DUMMY THREADS*/
 
-    //TODO: Replace this with an open socket to the server
-    private final Socket socket;
-    private final String cName;
-    private final int port;
-    private final ClientArbiter arbiter;
+class PredecessorThread extends Thread {
+    private final Socket predSocket;
+    private final TokenHandlerQueue toHandlerBuf;
 
-    public OutBufferThread(ClientBufferQueue oBuf, String clientName, Socket s, int myPort, ClientArbiter arb){
-        super("OutBufferThread");
-        this.outBuf = oBuf;
-        this.socket = s;
-        this.cName = clientName;
-        this.port = myPort;
-        this.arbiter = arb;
-        this.start();
+    public PredecessorThread(Socket s, TokenHandlerQueue b){
+        super("PredecessorThread");
+        predSocket = s;
+        toHandlerBuf = b;
     }
 
     @Override
     public void run() {
-        /* Open sockets */
-
-        ObjectOutputStream toServ = null;
-        ObjectInputStream fromServ = null;
-        try {
-            toServ = new ObjectOutputStream(socket.getOutputStream());
-            fromServ = new ObjectInputStream(socket.getInputStream());
-        } catch (IOException x) {
-            System.err.println("OutBufferThread couldn't open streams.");
-        }
-
-        /* Send a FIRST_CONNECT so that the receiver thread can open its communication. */
-        GamePacket fcon = new GamePacket();
-        fcon.type = GamePacket.FIRST_CONNECT;
-        fcon.port = port;
-        fcon.player_name = cName;
-        try {
-            toServ.writeObject(fcon);
-        } catch (IOException x) {
-            System.err.println("OutBufferThread couldn't write FCON.");
-        }
-        System.out.println("OutBufferThread wrote FCON packet.");
-
-        while (!isInterrupted()){
-            ClientQueueObject messageToServer = this.outBuf.takeFromBuf();
-            assert(messageToServer != null);
-            if (messageToServer.eventType == ClientEvent.die){
-                break;
-            }
-
-            //Turn the message into a GamePacket and send to the socket
-            GamePacket packetToServer = ClientArbiter.getPacketFromClientQ(messageToServer);
-
-            //We get and increment the Lamport clock on every packet we send
-            packetToServer.tstamp = arbiter.getAndIncrementLamportClock();
-
-            //TODO: Replace this with an iteration over all sockets we know about
-            try {
-                toServ.writeObject(packetToServer);
-            } catch (IOException x) {
-                System.err.println("Sender couldn't write packet.");
-            }
-        }
-        try{
-            toServ.close();
-            fromServ.close();
-            socket.close();
-        } catch (IOException x) {
-            System.err.println("OutBufferThread couldn't close sockets " + x.getMessage());
-        }
-        System.out.println("OutBufferThread dying! Bye!");
-    }
-}
-
-class InBufferThread extends Thread {
-    private final ServerSocket socketListener;
-    private final ConcurrentHashMap<String, ClientBufferQueue> inBufMap;
-    private final ClientArbiter arbiter;
-
-    public InBufferThread(ServerSocket ss, ConcurrentHashMap<String, ClientBufferQueue> iBufs, ClientArbiter arb){
-        super("InBufferThread");
-        this.socketListener = ss;
-        this.inBufMap = iBufs;
-        this.arbiter = arb;
-        this.start();
-    }
-
-    @Override
-    public void run() {
-        //First wait for the server to initiate a connection
-        Socket my_sock = null;
-        try {
-            my_sock = socketListener.accept();
-        } catch (IOException consumed) {
-            System.err.println("InBufferThread couldn't open socket.");
-        }
-
-        System.out.println("InBufferThread established socket connection.");
-
         //Now establish Object streams to/from the server
-        ObjectOutputStream toServ = null;
-        ObjectInputStream fromServ = null;
+        ObjectOutputStream toPred = null;
+        ObjectInputStream fromPred = null;
         try {
-            toServ = new ObjectOutputStream(my_sock.getOutputStream());
-            fromServ = new ObjectInputStream(my_sock.getInputStream());
+            toPred = new ObjectOutputStream(predSocket.getOutputStream());
+            fromPred = new ObjectInputStream(predSocket.getInputStream());
         } catch (IOException x) {
-            System.err.println("InBufferThread couldn't open input stream with message: " + x.getMessage());
+            System.err.println("PredecessorThread couldn't open input stream with message: " + x.getMessage());
         }
-        System.out.println("InBufferThread got new Input stream successfully.");
+        System.out.println("PredecessorThread got new Input stream successfully.");
 
         //Main Loop
         while (!isInterrupted()){
             //Get a packet from the server
-            GamePacket packetFromServer = null;
+            Token tokenFromPred = null;
             try {
-                packetFromServer = (GamePacket) fromServ.readObject();
+                tokenFromPred = (Token) fromPred.readObject();
             } catch (IOException x) {
                 System.err.println("InBufferThread missed reading packet!!");
                 continue;
@@ -213,48 +146,306 @@ class InBufferThread extends Thread {
                 System.err.println("InBufferThread pulled out something that isn't a GamePacket.");
                 continue;
             }
-            assert(packetFromServer != null);
+            assert(tokenFromPred != null);
 
-            //Convert it to a Client-friendly message
-            ClientQueueObject messageFromServer = ClientArbiter.getClientQFromPacket(packetFromServer);
-            assert(messageFromServer != null);
-            messageFromServer.lClock = arbiter.getMaxLamportClockAndIncrement(messageFromServer.lClock); 
+            //Send the token to the TokenHandlerThread
+            toHandlerBuf.insertToBuf(new IncomingPacketObject(tokenFromPred, null));
+        }
+        try{
+            toPred.close();
+            fromPred.close();
+            predSocket.close();
+        } catch (IOException x) {
+            System.err.println("PredecessorThread couldn't close sockets " + x.getMessage());
+        }
+        System.out.println("PredecessorThread thread dying! Bye!");
+    }
+}
 
-            String clientName = messageFromServer.clientName;
-            if (clientName == null && packetFromServer.type == GamePacket.SET_RAND_SEED){
-                //rand_seed is sent at the start and meant for the arbiter!
-                clientName = "arbiter";
+class ServerSocketThread extends Thread {
+    private final ServerSocket server;
+    private final TokenHandlerQueue toHandlerBuf;
+
+    public ServerSocketThread(ServerSocket s, TokenHandlerQueue b){
+        super("ServerSocketThread");
+        server = s;
+        toHandlerBuf = b;
+    }
+
+    @Override
+    public void run() {
+        //Main Loop
+        while (!isInterrupted()){
+            //Now establish Object streams to/from the server
+            Socket sock = null;
+            try {
+                sock = server.accept();
+            } catch (IOException x) {
+                System.err.println("ServerSocketThread couldn't open input stream with message: " + x.getMessage());
             }
+            System.out.println("ServerSocketThread got new Input stream successfully.");
+            assert(sock != null);
 
-            //Find the right queue to put the message into
-            ClientBufferQueue bufferToClient = this.inBufMap.get(clientName);
+            //2 Rules that we always impose for new connections to our server socket: 
+            // [1] A new connection is established only from a machine which...
+            //      During a join:  ...is trying to establish itself *as our successor*
+            //      During a leave: ...is our successor and is leaving.
+            //      During a replace: ...is replacing our old successor
+            // [2] The first thing that remote machine will do is send a GamePacket representing whether it's joining, leaving, or replacing
+            //      During a join:      Also includes its serverSocket port to send to our current successor
+            //      During a leave:     No extra information included; but by virtue of leaving we will ACK the leave and not send the packet
+            //                          to that successor anymore.
+            //      During a replace:   No extra information is included; we can simply replace this socket with our successor
+            //
+            //We can't actually read the packet here though - since the TokenHandlerThread may need to keep communicating with this socket,
+            //it has to be the one to open the Object streams!
+            toHandlerBuf.insertToBuf(new IncomingPacketObject(null, sock));
+        }
+        try{
+            server.close();
+        } catch (IOException x) {
+            System.err.println("ServerSocketThread couldn't close sockets " + x.getMessage());
+        }
+        System.out.println("ServerSocketThread thread dying! Bye!");
+    }  
 
-            if(messageFromServer.eventType == ClientEvent.join && bufferToClient == null){
-                System.out.println("InBufferThread creating new RemoteClient named " + clientName);
-                
-                //We've never seen this client before - must be a new remote client!
-                arbiter.createRemoteClientAndSendLocations(clientName);
+}
 
+/*END DUMMY THREADS*/
+
+class TokenHandlerThread extends Thread {
+    //Since there are two sockets you're listening/blocking on, you need two dummy threads
+    //which take packets from those sockets and put them into a buffer.
+    private PredecessorThread predThread;
+    private ServerSocketThread sockThread;
+    private final TokenHandlerQueue fromSocketsBuf;
+    
+    //Buffers to send information to our clients
+    private final ConcurrentHashMap<String, ClientBufferQueue> outBufMap;
+    private final ConcurrentHashMap<String, ClientBufferQueue> inBufMap;
+
+    //Sockets and Servers to connect to the ring
+    private Socket predSocket;
+    private AddressPortPair predPortPair;
+    
+    private Socket succSocket;
+    private ObjectOutputStream streamToSuccessor;
+    private ObjectInputStream streamFromSuccessor;
+
+    private ServerSocket socketListener;
+
+    //Arbiter handles ....something?
+    private final ClientArbiter arbiter;
+
+    boolean firstToConnect;
+
+    public TokenHandlerThread(  ConcurrentHashMap<String, ClientBufferQueue> oBufMap,
+                                ConcurrentHashMap<String, ClientBufferQueue> iBufMap, 
+                                AddressPortPair predLoc,
+                                int myServerPort,
+                                boolean first,
+                                ClientArbiter arb){
+        super("TokenHandlerThread");
+        this.outBufMap = oBufMap;
+        this.inBufMap = iBufMap;
+        this.arbiter = arb;
+        this.firstToConnect = first;
+        this.fromSocketsBuf = new TokenHandlerQueue();
+
+        //Make a new socket based on predLoc;
+        predPortPair = predLoc;
+        try {
+            predSocket = new Socket(predLoc.addr, predLoc.port);
+            predThread = new PredecessorThread(predSocket, fromSocketsBuf);
+
+            //Make a new server socket based on myServerPort;
+            socketListener = new ServerSocket(myServerPort);
+            sockThread = new ServerSocketThread(socketListener, fromSocketsBuf);
+
+            //Successor starts off as my predecessor because I need to send it join protocol packets
+            succSocket = new Socket(predLoc.addr, predLoc.port);
+        } catch (IOException e){
+            System.out.println("TokenHandlerThread failed to create with message: "+e.getMessage());
+            System.exit(-1);
+        }
+    }
+
+    @Override
+    public void run() {
+        //Start the dummy threads
+        predThread.start();
+        sockThread.start();
+
+        //Now initiate and complete the join protocol to get you in the ring
+        initiateJoinProtocol();
+
+        //Now wait for something from the queue
+        while(!isInterrupted()){
+            IncomingPacketObject packet = fromSocketsBuf.takeFromBuf(); //blocks until there's something there
+
+            if (packet.token != null){
+                handleToken(packet.token);
+            } else if (packet.socket != null){
+                handleSocket(packet.socket);
             } else {
-                assert(bufferToClient != null);
-
-                //now forward the packet to the appropriate client!
-                bufferToClient.insertToBuf(messageFromServer);
-            }
-
-            if (messageFromServer.eventType == ClientEvent.die){
-                break;
+                System.out.println("OH NOES!");
             }
         }
         try{
-            toServ.close();
-            fromServ.close();
-            my_sock.close();
+            predThread.interrupt();
+            sockThread.interrupt();
+            succSocket.close();
         } catch (IOException x) {
-            System.err.println("InBufferThread couldn't close sockets " + x.getMessage());
+            System.err.println("ServerSocketThread couldn't close sockets " + x.getMessage());
         }
-        System.out.println("InBufferThread thread dying! Bye!");
+        System.out.println("ServerSocketThread thread dying! Bye!");
     }
+
+    private void handleToken(Token token){
+        //if our predecessor is leaving, it tells us where to open the new connection to
+        if (token.predecessorReplaceLoc != null){
+            replacePredecessor(token.predecessorReplaceLoc);
+            token.predecessorReplaceLoc = null;
+        }
+        
+        //now render all of the events in the token
+        ArrayDeque<GamePacket> localQ = new ArrayDeque<GamePacket>();
+        GamePacket fromQ = null;
+        boolean weAreLeaving = false;
+        while ((fromQ = token.takeFromQ()) != null){
+            GamePacket toQ = fromQ;
+
+            ClientQueueObject tokenEvent = ClientArbiter.getClientQFromPacket(fromQ);
+
+            if (tokenEvent.clientName == null){
+                System.out.println("OH NOES! Null player name in the Token???? type = "+ClientArbiter.clientEventAsString(tokenEvent.eventType));
+                continue;
+            }
+            ClientBufferQueue toClientQ = inBufMap.get(tokenEvent.clientName);
+            if (toClientQ == null){ 
+                System.out.println("Dropping packet talking about unknown client "+tokenEvent.clientName);
+                continue;
+            }
+            toClientQ.insertToBuf(tokenEvent);
+
+            if (arbiter.isLocalClientName(tokenEvent.clientName)){
+                ClientBufferQueue fromClientQ = outBufMap.get(tokenEvent.clientName);
+                ClientQueueObject clientEvent = fromClientQ.takeFromBufNonBlocking();
+                if (clientEvent == null){
+                    toQ = ClientArbiter.generateNopPacket(tokenEvent.clientName);
+                } else {
+                    if (clientEvent.eventType == ClientEvent.leave){
+                        weAreLeaving = true;
+                    }
+                    toQ = ClientArbiter.getPacketFromClientQ(clientEvent);
+                }
+            }                  
+            localQ.add(toQ);
+        }
+        
+        //only ever initiated by a GUI client and starts everything shutting down!
+        if (weAreLeaving){
+            initiateLeaveProtocol(token);
+        }
+
+        //copy our version of the localQ back into the token
+        token.overWriteEventQueue(localQ);
+
+        //now pass the token on to our successor
+        try {
+            streamToSuccessor.writeObject(token);
+        } catch (IOException x) {
+            System.err.println("Sender couldn't write packet.");
+        }
+    }
+
+    private void handleSocket(Socket socket){
+
+    }
+    
+    private void initiateJoinProtocol(){ 
+        //Join protocol
+        //  [1] Open a connection to the machine who will be your predecessor and send then your server port
+        //      [2] That machine will take the socket it creates for this connection and use it as its new successor
+        //  [3] Wait for your successor to send you a socket on your server port
+        //  [4] Open a connection to your successor, using updateSuccessor(true)
+    }
+
+    private void updatePredecessor(AddressPortPair newPred){
+        //Kill the current PredecessorThread and replace it with a new one with an
+        //open connection to the new predecessor location
+    }
+
+    private void updateSuccessor(AddressPortPair newSucc, boolean sendPredUpdate){
+        //Replace the current successor socket with a new one at the new address
+        //if sendPredUpdate is true, send a special Token to your current successor
+        //containing newSucc.
+        //Your old successor will either replace its predecesssor with newSucc (as in a join)
+        //or recognize that it's ok to leave (as in a leave).
+    }
+
+    private void initiateLeaveProtocol(Token token){
+        //send a message to your predecessor which will trigger a updateSuccessor(true) on
+        //that machine 
+    }
+
+    private void replacePredecessor(AddressPortPair newPredLoc){
+        //swap the current predecessor socket with a new one at this location; kill and restart the predThread
+    }
+    
+    /*
+    private void blockOnMessageFromSocket(Socket sock){
+            ObjectOutputStream toNew = null;
+            ObjectInputStream fromNew = null;
+            try {
+                toNew = new ObjectOutputStream(sock.getOutputStream());
+                fromNew = new ObjectInputStream(sock.getInputStream());
+            } catch (IOException x) {
+                System.err.println("ServerSocketThread couldn't open input stream with message: " + x.getMessage());
+            }
+            System.out.println("ServerSocketThread got new Input stream successfully.");
+
+            GamePacket newRingPacket = null;
+            try {
+                newRingPacket = (GamePacket) fromNew.readObject();
+            } catch (IOException x) {
+                System.err.println("ServerSocketThread missed reading packet!!");
+                continue;
+            } catch (ClassNotFoundException cnf) {ObjectOutputStream toNew = null;
+            ObjectInputStream fromNew = null;
+            try {
+                toNew = new ObjectOutputStream(sock.getOutputStream());
+                fromNew = new ObjectInputStream(sock.getInputStream());
+            } catch (IOException x) {
+                System.err.println("ServerSocketThread couldn't open input stream with message: " + x.getMessage());
+            }
+            System.out.println("ServerSocketThread got new Input stream successfully.");
+
+            GamePacket newRingPacket = null;
+            try {
+                newRingPacket = (GamePacket) fromNew.readObject();
+            } catch (IOException x) {
+                System.err.println("ServerSocketThread missed reading packet!!");
+                continue;
+            } catch (ClassNotFoundException cnf) {
+                System.err.println("ServerSocketThread pulled out something that isn't a GamePacket.");
+                continue;
+            }
+            assert(newRingPacket != null);
+
+            //Close the output streams so the TokenHandlerThread can open its own
+            toNew.close();
+            fromNew.close();     
+                System.err.println("ServerSocketThread pulled out something that isn't a GamePacket.");
+                continue;
+            }
+            assert(newRingPacket != null);
+
+            //Close the output streams so the TokenHandlerThread can open its own
+            toNew.close();
+            fromNew.close();     
+    }
+    */
 }
 
 public class ClientArbiter {
@@ -268,64 +459,53 @@ public class ClientArbiter {
     private Socket toServerSocket;
     private ServerSocket fromServerListener;
 
-    private final ClientBufferQueue outBuffer;
+    //Maps of queues for the RingThread to communicate back to the clients/arbiter
+    private final ConcurrentHashMap<String, ClientBufferQueue> outBufferMap;
     private final ConcurrentHashMap<String, ClientBufferQueue> inBufferMap;
 
-    private final ClientBufferQueue arbiterInBuffer;
+    //Queue specifically targetting the arbiter for actions, usually during the join protocol
+    private final ClientBufferQueue arbiterBuffer;
 
-    private final OutBufferThread outThread;
-    private final InBufferThread inThread;
+    private final TokenHandlerThread tokenThread;
 
     private Maze maze;
     private final int seed;
 
-    private final AtomicInteger lamportClock;
-
-    public ClientArbiter(String myClientName, String serverHost, int serverPort, int myPort){
+    public ClientArbiter(String myClientName, AddressPortPair dnsLocation, int myPort, int seedArg){
+        seed = seedArg;
+        maze = null;
+        
         clientNameMap = new ConcurrentHashMap<String, Client>();
         threadWaitingOnMap = new ConcurrentHashMap<Long, ClientEvent>();
 
-        outBuffer = new ClientBufferQueue("masterOutBuffer");
+        outBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
         inBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
 
-        arbiterInBuffer = new ClientBufferQueue("arbiterInBuffer");
-        inBufferMap.put("arbiter", arbiterInBuffer);
+        arbiterBuffer = new ClientBufferQueue("arbiter");
+        inBufferMap.put("arbiter", arbiterBuffer);
 
-        //TODO: Open socket protocol; open two sockets to the server (send & receive)
-        toServerSocket = null;
-        fromServerListener = null;
-        try {
-            toServerSocket = new Socket(serverHost, serverPort);
-            fromServerListener = new ServerSocket(myPort);
-        } catch (Exception x) {
-            System.err.println("ERROR: Exception " + x.toString()+ " thrown on attempting to open sockets.");
-            System.exit(-1);
-        }
+        //#1: Contact the DNS to find everyone else's address/port
+        //#2: Choose a player as your predecessor
+        //#3: Construct a ringThread with that address/port, which will initiate a connection and
+        //    start the join protocol.
 
-        //TODO: Pass the socket to the buffer threads
-        outThread = new OutBufferThread(outBuffer, myClientName, toServerSocket, myPort, this);
-        inThread = new InBufferThread(fromServerListener, inBufferMap, this);
+        //Temp for compilation :)
+        AddressPortPair predLocation = new AddressPortPair(null, -1);
+        boolean firstToConnect = false;
 
-        ClientQueueObject seedMessage = arbiterInBuffer.takeFromBuf();
-        assert(seedMessage.eventType == ClientEvent.setRandomSeed);
-        seed = seedMessage.seed;
+        //Construct the RingThread, which will establish itself in the Ring
+        tokenThread = new TokenHandlerThread(outBufferMap, inBufferMap, predLocation, myPort, firstToConnect, this);
+        tokenThread.start();
 
-        lamportClock = new AtomicInteger(0);
-        
-        maze = null;
+        //Once the RingThread is inside the ring network, it will send us a message that it's OK to start a new Client
+        //ClientQueueObject canJoin = arbiterBuffer.takeFromBuf();
+        //assert(canJoin != null && canJoin.eventType == ClientEvent.clientProceed);
     }
-
 
     private static int getPacketTypeFromClientEvent(ClientEvent eType){
         int packetType = GamePacket.CLIENT_NULL;
-        if(eType == ClientEvent.locationRequest){
-            packetType = GamePacket.LOCATION_REQ;
-        } else if (eType == ClientEvent.locationResponse){
-            packetType = GamePacket.LOCATION_RESP;
-        } else if (eType == ClientEvent.remoteLocation){
-            packetType = GamePacket.REMOTE_LOC;
-        } else if (eType == ClientEvent.locationComplete){
-            packetType = GamePacket.ALL_LOC_DONE;
+        if (eType == ClientEvent.remoteLocation){
+            packetType = GamePacket.CLIENT_REMOTE_LOC;
         } else if (eType == ClientEvent.moveForward){
             packetType = GamePacket.CLIENT_MOVED_FORWARD;
         } else if (eType == ClientEvent.moveBackward){
@@ -346,25 +526,16 @@ public class ClientArbiter {
             packetType = GamePacket.CLIENT_JOINED;
         } else if (eType == ClientEvent.leave){
             packetType = GamePacket.CLIENT_LEFT;
-        } else if (eType == ClientEvent.die){
-            packetType = GamePacket.DIE;
+        } else if (eType == ClientEvent.nop){
+            packetType = GamePacket.CLIENT_NOP;
         }
         return packetType;
     }
     private static ClientEvent getClientEventFromPacketType(int packetType){
         ClientEvent eType = null;
         switch(packetType){
-            case GamePacket.LOCATION_REQ:
-                eType = ClientEvent.locationRequest;
-                break;
-            case GamePacket.LOCATION_RESP:
-                eType = ClientEvent.locationResponse;
-                break;
-            case GamePacket.REMOTE_LOC:
+            case GamePacket.CLIENT_REMOTE_LOC:
                 eType = ClientEvent.remoteLocation;
-                break;
-            case GamePacket.ALL_LOC_DONE:
-                eType = ClientEvent.locationComplete;
                 break;
             case GamePacket.CLIENT_MOVED_FORWARD:
                 eType = ClientEvent.moveForward;
@@ -399,13 +570,20 @@ public class ClientArbiter {
             case GamePacket.SET_RAND_SEED:
                 eType = ClientEvent.setRandomSeed;
                 break;
-            case GamePacket.DIE:
-                eType = ClientEvent.die;
+            case GamePacket.CLIENT_NOP:
+                eType = ClientEvent.nop;
                 break;
             default:
                 break;
         }
         return eType;
+    }
+    
+    public static GamePacket generateNopPacket(String clientName){
+        GamePacket packet = new GamePacket();
+        packet.type = GamePacket.CLIENT_NOP;
+        packet.player_name = clientName;
+        return packet;
     }
 
     public static GamePacket getPacketFromClientQ(ClientQueueObject qObject){
@@ -416,7 +594,6 @@ public class ClientArbiter {
         packet.player_name = qObject.clientName;
         packet.location = qObject.dPoint;
         packet.john_doe = qObject.targetName;
-        packet.tstamp = qObject.lClock;
         return packet;
     }
 
@@ -426,14 +603,20 @@ public class ClientArbiter {
         //First find out what type of event we're dealing with
         ClientEvent eType = getClientEventFromPacketType(packet.type);
         DirectedPoint dPoint = packet.location;
-        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed, packet.tstamp));
+        return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed));
     }
 
     public synchronized int getSeed(){
         return seed;
     }
 
+    public boolean isLocalClientName(String clientName){
+        Client thisClient = clientNameMap.get(clientName);
+        return (thisClient != null && thisClient instanceof LocalClient);
+    }
+
     public void handleRemoteLocationMessage(ClientQueueObject q){
+        //Given a remote location message as part of the dynamic join protocol, create and spawn a corresponding remote client
         assert(q != null);
         assert(q.eventType == ClientEvent.remoteLocation);
         assert(maze != null);
@@ -458,8 +641,21 @@ public class ClientArbiter {
         maze.addClient(c);
 
         //Send a join packet and block until it comes back
+        //This means opening a connection to your successor (referred to by the DNS)
+        //and sending them your name so they can intiate a join cycle with the existing
+        //participants of the ring and everyone can allocate a new client for you
         requestLocalClientEvent(c, ClientEvent.join); 
 
+        //TODO: Block until the token is received from your successor
+        //Token t = ringThread.blockUntilTokenReceived()
+        
+        //Now go through the Token and...
+        //  - for each client, spawn a RemoteClient at the location in the queue
+        //  - open a connection to your successor's predecessor (insert yourself in the ring)
+        //  - clear the "Player is Joining" bit
+        //  - choose a spawn location and put a spawn event into the queue
+
+        /*
         //Now get this client's input buffer
         ClientBufferQueue myInBuffer = inBufferMap.get(c.getName());
         //Now wait for the locations of every other player, spawning a new RemoteClient each time
@@ -472,33 +668,15 @@ public class ClientArbiter {
             if (eventFromServer == ClientEvent.locationComplete){
                 break;
             } else if (eventFromServer == ClientEvent.remoteLocation){
+                //Allocate and spawn a new client
                 handleRemoteLocationMessage(objectFromServer);
             } else {
                 System.out.println("ERROR: Received unexpected packet of type " + clientEventAsString(eventFromServer) + " during add protocol.");
             }
         }
-
-        //Finally, spawn the client in the maze!
+        */
+        //Finally, spawn this client randomly in the maze!
         maze.randomSpawnClient(c);
-    }
-
-    public void sendClientLocationToServer(LocalClient c){
-        String clientName = null;
-        if (c != null){
-            clientName = c.getName();
-        }
-        assert(clientName != null);
-
-        DirectedPoint dPoint = null;
-        if (c != null){
-            Point p = c.getPoint();
-            Direction d = c.getOrientation();
-            dPoint = new DirectedPoint(p, d);
-        }
-        assert(dPoint != null);
-
-        //write it to the output buffer for the outThread to find; let it take care of the Lamport Clock setting
-        outBuffer.insertToBuf(new ClientQueueObject(ClientEvent.locationResponse, clientName, null, dPoint, null, 0));
     }
 
     public void createRemoteClientAndSendLocations(String remoteClientName){
@@ -514,7 +692,7 @@ public class ClientArbiter {
         //to the server
         for (Client c : clientNameMap.values()){
             if (c instanceof LocalClient){
-                sendClientLocationToServer((LocalClient)c);
+                //sendClientLocationToServer((LocalClient)c);
             }
         }
     }
@@ -552,7 +730,7 @@ public class ClientArbiter {
         requestLocalClientEvent(c, ce, null, p);
     }
 
-    public String clientEventAsString(ClientEvent ce){
+    public static String clientEventAsString(ClientEvent ce){
         String ret = null;
         if        (ce == ClientEvent.moveForward){
             ret = "FORWARD";
@@ -574,18 +752,14 @@ public class ClientArbiter {
             ret = "JOIN";
         } else if (ce == ClientEvent.leave) {
             ret = "LEAVE";
-        } else if (ce == ClientEvent.locationResponse) {
-            ret = "LOCATION_RESPONSE";
-        } else if (ce == ClientEvent.locationRequest) {
-            ret = "LOCATION_REQUEST";
         } else if (ce == ClientEvent.remoteLocation) {
-            ret = "LOCATION_COMPLETE";
+            ret = "REMOTE_LOCATION";
         } else if (ce == ClientEvent.setRandomSeed) {
             ret = "SET_RANDOM_SEED";
         } else if (ce == ClientEvent.leave) {
             ret = "LEAVE";
-        } else if (ce == ClientEvent.die) {
-            ret = "DIE";
+        } else if (ce == ClientEvent.nop){
+            ret = "NOP";
         } else {
             ret = "UNKNOWN";
         }
@@ -609,7 +783,8 @@ public class ClientArbiter {
         }
 
         //Write the request to the output buffer; let the output thread care about the Lclock setting
-        outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p, null, 0));
+        ClientBufferQueue outBuffer = outBufferMap.get(clientName);
+        outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p, null));
 
         //Record that this thread is currently waiting for a reply
         Long curThreadId = Thread.currentThread().getId();
@@ -617,7 +792,7 @@ public class ClientArbiter {
 
         if(ce == ClientEvent.leave){
             //if we request to leave, we expect to be told to die.
-            ce = ClientEvent.die;
+            //ce = ClientEvent.die;
         }
 
         threadWaitingOnMap.put(curThreadId, ce);
@@ -673,9 +848,10 @@ public class ClientArbiter {
             c.kill(target);
         } else if (ce == ClientEvent.leave) {
             c.leave();
+        }/*
         } else if (ce == ClientEvent.die){
             outBuffer.insertToBuf(new ClientQueueObject(ce, null, null, null, null, 0));
-        }
+        }*/
     }
 
     public void addClient(Client c){
@@ -695,17 +871,5 @@ public class ClientArbiter {
         assert(m != null);
         this.maze = m;
         maze.addArbiter(this);
-    }
-
-    public synchronized int getAndIncrementLamportClock(){
-        return lamportClock.getAndIncrement();
-    }
-
-    public synchronized int getMaxLamportClockAndIncrement(int comp){
-        int old = lamportClock.get();
-        if (comp > old){
-            lamportClock.set(comp);
-        }
-        return getAndIncrementLamportClock();
     }
 }

@@ -12,14 +12,13 @@ public class GamePacket implements Serializable {
      */
     public static final int CLIENT_NULL = -1;
 
-    // these go in the join q
-    public static final int LOCATION_REQ = 20;
-    public static final int LOCATION_RESP = 21;
-    public static final int REMOTE_LOC = 22;
-    public static final int ALL_LOC_DONE = 23;
+    //Join/Leave Protocol Types
+    public static final int RING_JOIN = 1;
+    public static final int RING_LEAVE = 2;
+    public static final int RING_REPLACE = 3;
+    public static final int RING_SERVER_PORT = 4; 
 
     // these go in the event q
-    public static final int FIRST_CONNECT = 100;
     public static final int CLIENT_MOVED_FORWARD = 101;
     public static final int CLIENT_MOVED_BACK = 102;
     public static final int CLIENT_INVERT = 103;
@@ -28,37 +27,29 @@ public class GamePacket implements Serializable {
     public static final int CLIENT_FIRED = 300;
     public static final int CLIENT_KILLED = 404;
     public static final int CLIENT_SPAWNED = 42;
-
     public static final int CLIENT_JOINED = 202;
     public static final int CLIENT_LEFT = 203;
+    public static final int CLIENT_REMOTE_LOC = 22;
+    public static final int CLIENT_NOP = 666;
 
     // this is only ever sent out and never received
     public static final int SET_RAND_SEED = 999;
-
-    // this is internal for signalling the server send threads to die
-    public static final int DIE = -9999999;
 
     // this is a type only used by the lookup server to reply to
     // new client joins
     public static final int ADDR_PORT_LIST = 400;
 
     // default message type
-	public int type = GamePacket.CLIENT_NULL;
+    public int type = GamePacket.CLIENT_NULL;
 	
     // identifier for player
-	public String player_name = null;
+    public String player_name = null;
 
     // port this player is listening on
     public int port = -1;
 
     // identifier for the dead player
     public String john_doe = null;
-
-    // packet direction
-    public boolean request;
-
-    // parent timestamp
-    public int tstamp = -1;
 
     // rand seed
     public int seed = -1;

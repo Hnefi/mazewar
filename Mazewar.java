@@ -27,6 +27,7 @@ import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import javax.swing.BorderFactory;
 import java.io.Serializable;
+import java.net.InetAddress;
 
 /**
  * The entry point and glue code for the game.  It also contains some helpful
@@ -122,7 +123,7 @@ public class Mazewar extends JFrame {
         /** 
          * The place where all the pieces are put together. 
          */
-        public Mazewar(String serverHost, int serverPort, int myPort) {
+        public Mazewar(AddressPortPair dnsLocation, int myPort, int seed) {
                 super("ECE419 Mazewar");
                 consolePrintLn("ECE419 Mazewar started!");
                 // Throw up a dialog to get the GUIClient name.
@@ -133,7 +134,8 @@ public class Mazewar extends JFrame {
 
                 // You may want to put your network initialization code somewhere in
                 // here.
-                arbiter = new ClientArbiter(name, serverHost, serverPort, myPort); //establish a connection to the server
+                
+                arbiter = new ClientArbiter(name, dnsLocation, myPort, seed); //establish a connection to the server
                 mazeSeed = arbiter.getSeed(); //blocks until the server sends which seed to use
     
                 // Create the maze
@@ -236,16 +238,22 @@ public class Mazewar extends JFrame {
          * @param args Command-line arguments.
          */
         public static void main(String args[]) {
-                String serverHost = null;
-                int serverPort = -1;
+                String dnsHost = null;
+                int dnsPort = -1;
                 int myPort = -1;
-                if (args.length == 3){
-                    serverHost = args[0];
-                    serverPort = Integer.parseInt(args[1]);
+                int seed = -1;
+                if (args.length == 4){
+                    dnsHost = args[0];
+                    dnsPort = Integer.parseInt(args[1]);
                     myPort = Integer.parseInt(args[2]);
+                    seed = Integer.parseInt(args[3]);
                     
                     /* Create the GUI */
-                    new Mazewar(serverHost, serverPort, myPort);
+                    try{
+                        new Mazewar(new AddressPortPair(InetAddress.getByName(dnsHost), dnsPort), myPort, seed);
+                    } catch (java.net.UnknownHostException e){
+                        System.out.println("Cannot connect to inet Address "+dnsHost+", message:"+ e.getMessage());
+                    }
                 } else {
                     System.out.println("ERROR: Invalid args! java Mazewar <serverHost> <serverPort> <myPort>");
                 }
