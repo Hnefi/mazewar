@@ -10,7 +10,6 @@ import java.util.concurrent.*;
  */
 public class Token implements Serializable {
     private ArrayDeque<GamePacket> eventQ;
-    public boolean player_is_joining = false;
     public int num_machines = 0;
     public int num_players = 0; // this is different than num_machines because of robots
     public AddressPortPair predecessorReplaceLoc = null;
