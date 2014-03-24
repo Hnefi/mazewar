@@ -976,6 +976,7 @@ public class ClientArbiter {
     }
 
     public void waitUntilDieSignal(){
+        System.out.println("Thread ID #"+Thread.currentThread().getId()+" waiting for arbiter die signal");
         ClientQueueObject diePacket = null;
         while (diePacket == null){
             diePacket = dieBuffer.takeFromBuf();
@@ -1193,7 +1194,9 @@ public class ClientArbiter {
     public void removeClient(Client c){
         clientNameMap.remove(c.getName());
         inBufferMap.remove(c.getName());
-        c.unregisterArbiter();
+        if (!(c instanceof GUIClient)){
+            c.unregisterArbiter();
+        }
     }
 
     public void registerMaze(Maze m){
