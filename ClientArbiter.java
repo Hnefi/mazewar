@@ -857,10 +857,10 @@ public class ClientArbiter {
         assert(q.eventType == ClientEvent.remoteLocation);
         assert(maze != null);
 
-        String remoteName = q.targetName;
+        String remoteName = q.clientName;
         DirectedPoint remotePoint = q.dPoint;
         int score = q.score;
-
+        System.out.println("Creating a remote Client for client "+remoteName);
         Client existingClient = clientNameMap.get(remoteName);
         if (existingClient == null){
             RemoteClient rClient = maze.createRemoteClient(remoteName);
