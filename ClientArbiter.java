@@ -352,12 +352,13 @@ class TokenHandlerThread extends Thread {
         //before any events get processed
         if (cleanup_join_remnants && !firstToConnect){
             arbiter.addAllClientLocations(localQ);
+            token.predecessorReplaceLoc = temp_port_pair;
+            temp_port_pair = null;
         }
 
         //Now start extracting events from the Token and handling them
         GamePacket fromQ = null;
         boolean weAreLeaving = false;
-        firstToConnect = false; // this is so we don't try to render old clients that aren't there.....
         while ((fromQ = token.takeFromQ()) != null){
             GamePacket toQ = fromQ;
 
@@ -408,19 +409,15 @@ class TokenHandlerThread extends Thread {
         //copy our version of the localQ back into the token
         token.overWriteEventQueue(localQ);
 
-        if (cleanup_join_remnants) { // tell successor to replace its pred
-            token.predecessorReplaceLoc = temp_port_pair;
-            temp_port_pair = null;
-        }
-
         //now pass the token on to our successor
         try {
+            System.out.println("Done everything, trying to write token out the successor stream...");
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
         }
 
-        if (cleanup_join_remnants) {
+        if (cleanup_join_remnants && !firstToConnect) {
             // update our successor objects to write to. (clear the tmp variables as well)
             succSocket = next_successor_sock;
             streamToSuccessor = next_succ_out_stream;
@@ -432,6 +429,8 @@ class TokenHandlerThread extends Thread {
 
             cleanup_join_remnants = false;
         }
+        cleanup_join_remnants = false;
+        firstToConnect = false; // this is so we don't try to render old clients that aren't there.....
     }
 
     private void handleSocket(Socket socket){
@@ -783,7 +782,7 @@ public class ClientArbiter {
         packet.player_name = qObject.clientName;
         packet.location = qObject.dPoint;
         packet.john_doe = qObject.targetName;
-        packet.score = qObject.score;
+        packet.score = (qObject.score == null) ? -1 : qObject.score.intValue();
         return packet;
     }
 

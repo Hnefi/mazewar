@@ -31,7 +31,7 @@ public class Token implements Serializable {
     /* Setter method for re-initializing the events queue to the passed in
      * data structure.
      */
-    public void overWriteEventQueue(AbstractCollection<GamePacket>new_q) {
+    public void overWriteEventQueue(ArrayDeque<GamePacket>new_q) {
         ArrayDeque<GamePacket> overwrite_with_this = new ArrayDeque<GamePacket>(new_q);
         this.eventQ = overwrite_with_this; //garbage collect the old queue
     }
