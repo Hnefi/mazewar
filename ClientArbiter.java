@@ -384,7 +384,7 @@ class TokenHandlerThread extends Thread {
 
             ClientBufferQueue toClientQ = inBufMap.get(tokenEvent.clientName);
             if (toClientQ == null){ 
-                System.out.println("Dropping packet of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+"talking about unknown client "+tokenEvent.clientName);
+                System.out.println("Dropping packet of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" talking about unknown client "+tokenEvent.clientName);
                 continue;
             }
 
@@ -877,7 +877,9 @@ public class ClientArbiter {
         Client existingClient = clientNameMap.get(remoteName);
         if (existingClient == null){
             RemoteClient rClient = maze.createRemoteClient(remoteName);
-            maze.spawnClient(rClient, remotePoint); 
+            if (remotePoint != null){
+                maze.spawnClient(rClient, remotePoint);
+            }
             maze.setClientScore(rClient, score);
         }
     }
