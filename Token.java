@@ -13,7 +13,6 @@ public class Token implements Serializable {
     public int num_machines = 0;
     public int num_players = 0; // this is different than num_machines because of robots
     public AddressPortPair predecessorReplaceLoc = null;
-    public AddressPortPair successorReplaceLoc = null;
 
     /* Default constructor */ 
     public Token() {
