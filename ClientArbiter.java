@@ -344,11 +344,7 @@ class TokenHandlerThread extends Thread {
         //If we've just added a new machine, we need to send the locations of all our clients around to those machines
         //before any events get processed
         if (send_locations){
-            int qSize = localQ.size();
-            System.out.println("Queue size before adding locations: "+qSize);
-            localQ = arbiter.addAllClientLocations(localQ);
-            qSize = localQ.size();
-            System.out.println("Queue size after adding locations: "+qSize);
+            arbiter.addAllClientLocations(localQ);
             send_locations = false;
         }
         if (cleanup_join_remnants && !firstToConnect) {
@@ -359,7 +355,8 @@ class TokenHandlerThread extends Thread {
 
         //Now start extracting events from the Token and handling them
         GamePacket fromQ = null;
-        boolean weAreLeaving = false;
+        boolean pushAllClientsLeaving = false; //performed when we detect that a client wants to leave
+        boolean weAreLeaving = false; //performed when we pull leave packets out of the token for a LocalClient
         while ((fromQ = token.takeFromQ()) != null){
             GamePacket toQ = fromQ;
 
@@ -370,8 +367,8 @@ class TokenHandlerThread extends Thread {
                 continue;
             }
 
-            if (tokenEvent.eventType == ClientEvent.remoteLocation){
-                System.out.println("Saw an event of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" for client "+tokenEvent.clientName);
+            if (tokenEvent.eventType == ClientEvent.leave && arbiter.isLocalClientName(tokenEvent.clientName)){
+                weAreLeaving = true;
             }
 
             boolean shouldSendPacketToClient = (tokenEvent.eventType != ClientEvent.nop);
@@ -404,10 +401,10 @@ class TokenHandlerThread extends Thread {
                 ClientQueueObject clientEvent = fromClientQ.takeFromBufNonBlocking();
                 if (clientEvent != null){
                     System.out.println("Received an event "+ClientArbiter.clientEventAsString(clientEvent.eventType)+" from client "+clientEvent.clientName);
-                    if (clientEvent.eventType == ClientEvent.leave){
-                        weAreLeaving = true;
-                    }
                     toQ = ClientArbiter.getPacketFromClientQ(clientEvent);
+                    if (clientEvent.eventType == ClientEvent.leave && !weAreLeaving){
+                        pushAllClientsLeaving = true;
+                    }
                 } else {
                     toQ = ClientArbiter.generateNopPacket(tokenEvent.clientName);
                 }
@@ -427,7 +424,9 @@ class TokenHandlerThread extends Thread {
 
         //only ever initiated by a GUI client and starts everything shutting down!
         if (weAreLeaving){
-            initiateLeaveProtocol(token);
+            initiateLeaveProtocol(token); //this thread dies in here
+        } else if (pushAllClientsLeaving){
+            arbiter.pushAllLocalClientsLeaving(localQ);
         }
 
         //copy our version of the localQ back into the token
@@ -1009,7 +1008,7 @@ public class ClientArbiter {
         assert(c != null);
 
         ClientEvent waitingOn = threadWaitingOnMap.get(Thread.currentThread().getId());
-        if (c instanceof LocalClient && waitingOn != ce){
+        if (c instanceof LocalClient && waitingOn != ce && ce != ClientEvent.leave){
             String waitingString = clientEventAsString(waitingOn);
             assert (waitingString != null);
             String processString = clientEventAsString(ce);
@@ -1050,7 +1049,20 @@ public class ClientArbiter {
         }
     }
 
-    public ArrayDeque<GamePacket> addAllClientLocations(ArrayDeque<GamePacket> queue){
+    public void pushAllLocalClientsLeaving(ArrayDeque<GamePacket> queue){
+        System.out.println("Setting all my LocalClients to leaving!");
+        for (Client c : clientNameMap.values()){
+            if (!(c instanceof LocalClient)){
+                continue;
+            }
+            GamePacket leavePacket = new GamePacket();
+            leavePacket.type = GamePacket.CLIENT_LEFT;
+            leavePacket.player_name = c.getName();
+            queue.add(leavePacket); 
+        }
+    }
+
+    public void addAllClientLocations(ArrayDeque<GamePacket> queue){
         System.out.println("Adding locations of all my clients!");
         for (Client c : clientNameMap.values()){
             GamePacket locPacket = new GamePacket();
@@ -1060,7 +1072,6 @@ public class ClientArbiter {
             locPacket.score = maze.getClientScore(c);
             queue.add(locPacket); 
         }
-        return queue; 
     }
 
     public void addClient(Client c){
