@@ -376,6 +376,12 @@ class TokenHandlerThread extends Thread {
             localQ.add(toQ);
         }
 
+        //Now pull from the special arbiter buffer looking for join packets
+        while ((fromQ = arbiter.getPacketFromArbQ()) != null){
+            //just put these packets straight into the token; in Arbiter we trust!
+            localQ.add(fromQ);
+        }
+
         //only ever initiated by a GUI client and starts everything shutting down!
         if (weAreLeaving){
             initiateLeaveProtocol(token);
@@ -596,9 +602,7 @@ public class ClientArbiter {
 
         outBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
         inBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
-
-        arbiterBuffer = new ClientBufferQueue("arbiter");
-        inBufferMap.put("arbiter", arbiterBuffer);
+        arbiterBuffer = new ClientBufferQueue(null);
 
         boolean firstToConnect = false;
         //#1: Contact the DNS to find everyone else's address/port
@@ -767,6 +771,42 @@ public class ClientArbiter {
         return (new ClientQueueObject(eType, packet.player_name, packet.john_doe, dPoint, packet.seed, packet.score));
     }
 
+    public static String clientEventAsString(ClientEvent ce){
+        String ret = null;
+        if        (ce == ClientEvent.moveForward){
+            ret = "FORWARD";
+        } else if (ce == ClientEvent.moveBackward){
+            ret = "BACKWARD";
+        } else if (ce == ClientEvent.turnLeft) {
+            ret = "LEFT";
+        } else if (ce == ClientEvent.turnRight) {
+            ret = "RIGHT";
+        } else if (ce == ClientEvent.invert) {
+            ret = "INVERT";
+        } else if (ce == ClientEvent.fire) {
+            ret = "FIRE";
+        } else if (ce == ClientEvent.spawn) {
+            ret = "SPAWN";
+        } else if (ce == ClientEvent.kill) {
+            ret = "KILL";
+        } else if (ce == ClientEvent.join) {
+            ret = "JOIN";
+        } else if (ce == ClientEvent.leave) {
+            ret = "LEAVE";
+        } else if (ce == ClientEvent.remoteLocation) {
+            ret = "REMOTE_LOCATION";
+        } else if (ce == ClientEvent.setRandomSeed) {
+            ret = "SET_RANDOM_SEED";
+        } else if (ce == ClientEvent.leave) {
+            ret = "LEAVE";
+        } else if (ce == ClientEvent.nop){
+            ret = "NOP";
+        } else {
+            ret = "UNKNOWN";
+        }
+        return ret;
+    }
+
     public synchronized int getSeed(){
         return seed;
     }
@@ -774,6 +814,17 @@ public class ClientArbiter {
     public boolean isLocalClientName(String clientName){
         Client thisClient = clientNameMap.get(clientName);
         return (thisClient != null && thisClient instanceof LocalClient);
+    }
+
+    public GamePacket getPacketFromArbQ(){
+        //Reads a packet from the arbiter queue; only used during joins as a central point the TokenHandlerThread can always use
+        //instead of iterating through the buffer map to find a new client.
+        GamePacket retPacket = null;    
+        ClientQueueObject fromArb = arbiterBuffer.takeFromBufNonBlocking();
+        if (fromArb != null && fromArb.clientName != null){
+            retPacket = getPacketFromClientQ(fromArb);
+        }
+        return retPacket;
     }
 
     public void createRemoteClient(ClientQueueObject q){
@@ -851,42 +902,6 @@ public class ClientArbiter {
         requestLocalClientEvent(c, ce, null, p);
     }
 
-    public static String clientEventAsString(ClientEvent ce){
-        String ret = null;
-        if        (ce == ClientEvent.moveForward){
-            ret = "FORWARD";
-        } else if (ce == ClientEvent.moveBackward){
-            ret = "BACKWARD";
-        } else if (ce == ClientEvent.turnLeft) {
-            ret = "LEFT";
-        } else if (ce == ClientEvent.turnRight) {
-            ret = "RIGHT";
-        } else if (ce == ClientEvent.invert) {
-            ret = "INVERT";
-        } else if (ce == ClientEvent.fire) {
-            ret = "FIRE";
-        } else if (ce == ClientEvent.spawn) {
-            ret = "SPAWN";
-        } else if (ce == ClientEvent.kill) {
-            ret = "KILL";
-        } else if (ce == ClientEvent.join) {
-            ret = "JOIN";
-        } else if (ce == ClientEvent.leave) {
-            ret = "LEAVE";
-        } else if (ce == ClientEvent.remoteLocation) {
-            ret = "REMOTE_LOCATION";
-        } else if (ce == ClientEvent.setRandomSeed) {
-            ret = "SET_RANDOM_SEED";
-        } else if (ce == ClientEvent.leave) {
-            ret = "LEAVE";
-        } else if (ce == ClientEvent.nop){
-            ret = "NOP";
-        } else {
-            ret = "UNKNOWN";
-        }
-        return ret;
-    }
-
     public void requestLocalClientEvent(LocalClient c, ClientEvent ce, Client target, DirectedPoint p)    {
         //Sends a request to the server regarding this client
         String clientName = null;
@@ -905,6 +920,10 @@ public class ClientArbiter {
 
         //Write the request to the Client's output buffer
         ClientBufferQueue outBuffer = outBufferMap.get(clientName);
+        if (ce == ClientEvent.join){
+            //Put joins in the arbiter buffer so the TokenHandlerThread can easily find them
+            outBuffer = arbiterBuffer;
+        }
         outBuffer.insertToBuf(new ClientQueueObject(ce, clientName, targetName, p, null, null));
 
         //Record that this thread is currently waiting for a reply
