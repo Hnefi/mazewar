@@ -164,8 +164,10 @@ class PredecessorThread extends Thread {
             }
             assert(tokenFromPred != null);
 
+            System.out.println("PredecessorThread received a token! Putting in the TokenHandlerQueue...");
             //Send the token to the TokenHandlerThread
             toHandlerBuf.insertToBuf(new IncomingPacketObject(tokenFromPred, null));
+            System.out.println("Token passed into the TokenHandlerQueue...");
         }
         try{
             toPred.close();
@@ -318,6 +320,7 @@ class TokenHandlerThread extends Thread {
         //Now wait for something from the queue
         while(!isInterrupted()){
             //System.out.println("Token handler thread going to sleep on the queue.....");
+            System.out.println("TokenHandlerThread checking for actions...");
             IncomingPacketObject packet = fromSocketsBuf.takeFromBuf(); //blocks until there's something there
             //System.out.println("Token handler woke up!!! I wonder wat's in the q?!");
             if (packet.token != null){
@@ -339,6 +342,7 @@ class TokenHandlerThread extends Thread {
     }
 
     private void handleToken(Token token){
+        System.out.println("Thread ID #"+Thread.currentThread().getId()+" processing a token.");
         //if our predecessor is leaving, it tells us where to open the new connection to
         if (token.predecessorReplaceLoc != null){
             replacePredecessor(token.predecessorReplaceLoc);
@@ -369,7 +373,7 @@ class TokenHandlerThread extends Thread {
                 continue;
             }
 
-            if (tokenEvent.eventType == ClientEvent.remoteLocation){
+            if (tokenEvent.eventType == ClientEvent.remoteLocation && !arbiter.isLocalClientName(tokenEvent.clientName)){
                 arbiter.createRemoteClient(tokenEvent);
             }
 
@@ -378,18 +382,25 @@ class TokenHandlerThread extends Thread {
                 System.out.println("Dropping packet talking about unknown client "+tokenEvent.clientName);
                 continue;
             }
-            toClientQ.insertToBuf(tokenEvent);
+
+            if (tokenEvent.eventType != ClientEvent.nop){
+                System.out.println("TokenHandlerThread sending "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" event to client "+tokenEvent.clientName);
+                toClientQ.insertToBuf(tokenEvent);
+            }
 
             if (arbiter.isLocalClientName(tokenEvent.clientName)){
                 ClientBufferQueue fromClientQ = outBufMap.get(tokenEvent.clientName);
+                //System.out.println("Looking for an event from LocalClient "+tokenEvent.clientName);
                 ClientQueueObject clientEvent = fromClientQ.takeFromBufNonBlocking();
-                if (clientEvent == null){
-                    toQ = ClientArbiter.generateNopPacket(tokenEvent.clientName);
-                } else {
+                if (clientEvent != null){
+                    System.out.println("Received an event "+ClientArbiter.clientEventAsString(clientEvent.eventType)+" from client "+clientEvent.clientName);
                     if (clientEvent.eventType == ClientEvent.leave){
                         weAreLeaving = true;
                     }
                     toQ = ClientArbiter.getPacketFromClientQ(clientEvent);
+                } else {
+                    //System.out.println("Received a null event for client"+tokenEvent.clientName);
+                    toQ = ClientArbiter.generateNopPacket(tokenEvent.clientName);
                 }
             }                  
             localQ.add(toQ);
@@ -416,6 +427,7 @@ class TokenHandlerThread extends Thread {
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
         }
+        System.out.println("Token passed.");
 
         if (cleanup_join_remnants && !firstToConnect) {
             // update our successor objects to write to. (clear the tmp variables as well)
@@ -686,6 +698,7 @@ public class ClientArbiter {
         }
 
         //Construct the TokenHandlerThread, which will establish itself in the Ring
+        System.out.println("Thread ID #"+Thread.currentThread().getId()+" creating the TokenHandlerThread.");
         tokenThread = new TokenHandlerThread(outBufferMap, inBufferMap, predLocation, myPort, firstToConnect, this);
         tokenThread.start();
     }
@@ -893,7 +906,7 @@ public class ClientArbiter {
         ClientBufferQueue myInBuffer = inBufferMap.get(clientName);
         if(myInBuffer != null){
             ClientQueueObject clientEvent = null;
-            while (clientEvent == null || clientEvent.eventType == ClientEvent.nop){
+            while (clientEvent == null){
                 clientEvent = myInBuffer.takeFromBuf();
             }
             processEvent(clientEvent);
@@ -1013,7 +1026,7 @@ public class ClientArbiter {
         } else if (ce == ClientEvent.leave) {
             c.leave();
         } else {
-            System.out.println("WARNING: Thread ID #" + Thread.currentThread().getId() + " processed unknown event " + clientEventAsString(ce));
+            System.out.println("WARNING: Thread ID #" + Thread.currentThread().getId() + " processed unhandled event " + clientEventAsString(ce));
         }
     }
 
