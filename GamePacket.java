@@ -54,6 +54,9 @@ public class GamePacket implements Serializable {
     // rand seed
     public int seed = -1;
 
+    // player score
+    public int score = -1;
+
     // spawn point (NO FRIGGIN CAMPING)
     public DirectedPoint location = null;
     
