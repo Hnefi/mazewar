@@ -429,7 +429,7 @@ class TokenHandlerThread extends Thread {
 
         //now pass the token on to our successor
         try {
-            System.out.println("Done everything, trying to write token out the successor stream...");
+            //System.out.println("Done everything, trying to write token out the successor stream...");
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
@@ -437,7 +437,7 @@ class TokenHandlerThread extends Thread {
             System.err.println("null exception trying to write token: " + x.getMessage());
         }
 
-        System.out.println("Token passed.");
+        //System.out.println("Token passed.");
 
         if (cleanup_join_remnants && !firstToConnect) {
             // update our successor objects to write to. (clear the tmp variables as well)
