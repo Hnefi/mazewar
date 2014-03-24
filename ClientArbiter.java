@@ -344,7 +344,7 @@ class TokenHandlerThread extends Thread {
         //If we've just added a new machine, we need to send the locations of all our clients around to those machines
         //before any events get processed
         if (cleanup_join_remnants && send_locations){
-            arbiter.addAllClientLocations(localQ);
+            localQ = arbiter.addAllClientLocations(localQ);
             token.predecessorReplaceLoc = temp_port_pair;
             temp_port_pair = null;
             send_locations = false;
@@ -1026,7 +1026,7 @@ public class ClientArbiter {
         }
     }
 
-    public void addAllClientLocations(ArrayDeque<GamePacket> queue){
+    public ArrayDeque<GamePacket> addAllClientLocations(ArrayDeque<GamePacket> queue){
         System.out.println("Adding locations of all my clients!");
         for (Client c : clientNameMap.values()){
             GamePacket locPacket = new GamePacket();
@@ -1035,7 +1035,8 @@ public class ClientArbiter {
             locPacket.location = new DirectedPoint(c.getPoint(), c.getOrientation());
             locPacket.score = maze.getClientScore(c);
             queue.add(locPacket); 
-        } 
+        }
+        return queue; 
     }
 
     public void addClient(Client c){
