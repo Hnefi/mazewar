@@ -885,6 +885,10 @@ public class ClientArbiter {
         String remoteName = q.clientName;
         DirectedPoint remotePoint = q.dPoint;
         int score = q.score;
+        if (score == -1){
+            //Newly joining client!
+            score = 0;
+        }
         System.out.println("Creating a remote Client for client "+remoteName);
         Client existingClient = clientNameMap.get(remoteName);
         if (existingClient == null){
