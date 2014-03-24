@@ -265,6 +265,7 @@ class TokenHandlerThread extends Thread {
 
     boolean firstToConnect;
     boolean cleanup_join_remnants = false;
+    boolean send_locations = false;
 
     public TokenHandlerThread(  ConcurrentHashMap<String, ClientBufferQueue> oBufMap,
             ConcurrentHashMap<String, ClientBufferQueue> iBufMap, 
@@ -354,10 +355,11 @@ class TokenHandlerThread extends Thread {
         
         //If we've just added a new machine, we need to send the locations of all our clients around to those machines
         //before any events get processed
-        if (cleanup_join_remnants && !firstToConnect){
+        if (cleanup_join_remnants && send_locations){
             arbiter.addAllClientLocations(localQ);
             token.predecessorReplaceLoc = temp_port_pair;
             temp_port_pair = null;
+            send_locations = false;
         }
 
         //Now start extracting events from the Token and handling them
@@ -445,9 +447,8 @@ class TokenHandlerThread extends Thread {
             next_successor_sock = null;
 
             cleanup_join_remnants = false;
+            firstToConnect = false;
         }
-        cleanup_join_remnants = false;
-        firstToConnect = false; // this is so we don't try to render old clients that aren't there.....
     }
 
     private void handleSocket(Socket socket){
@@ -479,7 +480,7 @@ class TokenHandlerThread extends Thread {
         // process the first packet we got back
         if (first_pack.type == GamePacket.RING_JOIN) {
             cleanup_join_remnants = true; // for next time we get token
-
+            send_locations = true;
             // This new connection is going to be our successor.
             temp_port_pair = new AddressPortPair(socket.getInetAddress(),first_pack.port);
 
@@ -494,6 +495,7 @@ class TokenHandlerThread extends Thread {
                 /* Now make a new token and put it in our local queue. */
                 Token new_t = new Token();
                 fromSocketsBuf.insertToBuf(new IncomingPacketObject(new_t,null));
+                send_locations = false;
                 return;
             }
 
