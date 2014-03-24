@@ -325,9 +325,9 @@ class TokenHandlerThread extends Thread {
             sockThread.interrupt();
             succSocket.close();
         } catch (IOException x) {
-            System.err.println("ServerSocketThread couldn't close sockets " + x.getMessage());
+            System.err.println("Error upon TokenHandlerThread killing threads and dying: " + x.getMessage());
         }
-        System.out.println("ServerSocketThread thread dying! Bye!");
+        System.out.println("TokenHandlerThread dying!! gg yo");
     }
 
     private void handleToken(Token token){
@@ -435,6 +435,16 @@ class TokenHandlerThread extends Thread {
         //now pass the token on to our successor
         try {
             //System.out.println("Done everything, trying to write token out the successor stream...");
+            while (streamToSuccessor == null) {
+                // block until we get one
+                synchronized (streamToSuccessor) {
+                    try { 
+                        streamToSuccessor.wait();   
+                    } catch (InterruptedException x) {
+                        interrupt();
+                    }
+                }
+            }
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
@@ -537,7 +547,20 @@ class TokenHandlerThread extends Thread {
             succSocket = socket;
             streamToSuccessor = to_socket;
             streamFromSuccessor = from_socket;
+
+            synchronized (streamToSuccessor) {
+                streamToSuccessor.notifyAll(); // wakes any sleeping threads here.
+            }
+
             System.out.println("Replaced all successor sockets and streams, my work here is done......");
+        } else if (first_pack.type == GamePacket.RING_INVALIDATE) {
+            /* Need to assign all our successor variables to NULL (will cause any tokens getting here to stall)
+             * until we get a ring_replace to re-construct them.
+             */
+            succSocket = null;
+            streamToSuccessor = null;
+            streamFromSuccessor = null;
+            
         } else if (first_pack.type == GamePacket.RING_NOP) {
             // update successor to be this new socket (NEXT TIME)
             this.next_successor_sock = socket;
@@ -562,22 +585,7 @@ class TokenHandlerThread extends Thread {
         GamePacket join_pack = new GamePacket();
         join_pack.type = GamePacket.RING_JOIN;
         join_pack.port = myServerPort;
-        /*
-        Socket to_my_pred = null;
-        ObjectOutputStream stream_to_pred = null;
-        ObjectInputStream stream_from_pred = null;
-
-
-        try { 
-           to_my_pred = new Socket(predPortPair.addr,predPortPair.port); 
-           stream_to_pred = new ObjectOutputStream(my_successor.getOutputStream());
-           stream_from_pred = new ObjectInputStream(my_successor.getInputStream());
-
-           stream_to_pred.writeObject(join_pack);
-        } catch (IOException x) {
-            System.err.println("IOException in creating socket & streams to ring entry point (in join protocol): " + x.getMessage());
-        }
-        */
+        
         /* Now we can create a predecessor thread for this join point (it will send a ring_nop as first operation) */
         try { 
             predSocket = new Socket(predPortPair.addr,predPortPair.port);
@@ -596,6 +604,7 @@ class TokenHandlerThread extends Thread {
     private void updatePredecessor(AddressPortPair newPred){
         //Kill the current PredecessorThread and replace it with a new one with an
         //open connection to the new predecessor location
+        predPortPair = newPred;
         predThread.interrupt();
         try {
             System.out.println("Killed old predThread... Now making new socket to the following address: " + newPred.addr.toString() + " : " + newPred.port);
@@ -611,10 +620,76 @@ class TokenHandlerThread extends Thread {
     }
 
     private void initiateLeaveProtocol(Token token){
-        //send a message to your predecessor which will trigger a updateSuccessor(true) on
-        //that machine
-        //ALSO IMPORTANT: For every Robot client on this machine, you need to push a "Client is Leaving"
-        //event into the Token! 
+        //leave protocol:
+        //      first need to tell OUR predecessor to invalidate its successor (will remove racing the token around the ring)
+        //  [1] We HAVE the token right now - basically all we need to do is send along with the token the location of our
+        //      predecessor. It will then replace ITS predecessor thread.
+        //  [2] that new predThread will send a RING_REPLACE packet through the channel, which will cause the old predecessor
+        //      to update its successor socket immediately. 
+        //      IMPORTANT: How to deal with the race condition between this RING_REPLACE packet and the actual token?! (fixed)
+        //  [3] Contact the dns and tell it that we are leaving the game.
+ 
+        /* Talk to dns and unregister */
+        AddressPortPair dnsLocation = arbiter.getDnsLocation();
+        Socket dns_sock = null;
+        ObjectOutputStream to_dns = null;
+        ObjectInputStream from_dns = null;
+        try {
+            dns_sock = new Socket(dnsLocation.addr,dnsLocation.port);
+            to_dns = new ObjectOutputStream(dns_sock.getOutputStream());
+            from_dns = new ObjectInputStream(dns_sock.getInputStream());
+        } catch (IOException x) {
+            System.err.println("Error opening connection to player lookup server: " + x.getMessage());
+        }
+
+        GamePacket location_lookup = new GamePacket();
+        location_lookup.type = GamePacket.RING_LEAVE;
+
+        GamePacket packet_w_status = null;
+        try {
+            to_dns.writeObject(location_lookup); // send and wait for lookup reply
+
+            packet_w_status = (GamePacket) from_dns.readObject(); // blocking
+        }catch (IOException x) {
+            System.err.println("Error sending leave request and reading response from player lookup server: " + x.getMessage());
+        } catch (ClassNotFoundException e) {
+            System.err.println("ClassNotFoundException when reading response from lookup server: " + e.getMessage());
+        }
+
+        /* Now handle the case where we are the LAST one to leave the ring. interrupt myself and die */
+        if (packet_w_status.type == GamePacket.RING_LAST_PLAYER) {
+            System.out.println("We are last!!!");
+            interrupt();
+            return;
+            // need to de-render maze or somehow signal the arbiter to die (this automaticaly happens)
+        }
+      
+        Socket sock = null;
+        ObjectOutputStream newOut = null;
+        ObjectInputStream newIn = null;
+        try {
+            sock = new Socket(predPortPair.addr,predPortPair.port); // new connection to predecessor
+            newOut = new ObjectOutputStream(sock.getOutputStream());
+            newOut.flush();
+            newIn = new ObjectInputStream(sock.getInputStream());
+        } catch (IOException x) {
+            System.err.println("tokenhandlerThread got error on trying to open new connection to pred to invalidate: " + x.getMessage());
+        }
+
+        GamePacket first = new GamePacket();
+        first.type = GamePacket.RING_INVALIDATE;
+
+        try { 
+            newOut.writeObject(first);
+        }  catch (IOException x) {
+            System.err.println("tokenhandlerThread got error on trying to send first packet on leave protocol: " + x.getMessage());
+        }
+
+        token.predecessorReplaceLoc = predPortPair; // saved already
+
+        // can kill our predecessor thread (since nothing is blocking on that from the other side of the socket)
+        predThread.interrupt();
+        predThread = null;
     }
 }
 
@@ -640,10 +715,12 @@ public class ClientArbiter {
 
     private Maze maze;
     private final int seed;
+    
+    private final AddressPortPair dns_pair;
 
     public ClientArbiter(String myClientName, AddressPortPair dnsLocation, int myPort){
         maze = null;
-
+        dns_pair = dnsLocation;
         clientNameMap = new ConcurrentHashMap<String, Client>();
         threadWaitingOnMap = new ConcurrentHashMap<Long, ClientEvent>();
 
@@ -700,18 +777,23 @@ public class ClientArbiter {
             predLocation = other_players.get(0);
         }
 
+        
         try {
-            to_dns.close();
-            from_dns.close();
-            dns_sock.close();
+            GamePacket close = new GamePacket();
+            close.type = GamePacket.RING_NOP;
+            to_dns.writeObject(close);
         } catch (IOException x) {
             System.err.println("Error closing sockets to player lookup server: " + x.getMessage());
-        }
+        } 
 
         //Construct the TokenHandlerThread, which will establish itself in the Ring
         System.out.println("Thread ID #"+Thread.currentThread().getId()+" creating the TokenHandlerThread.");
         tokenThread = new TokenHandlerThread(outBufferMap, inBufferMap, predLocation, myPort, firstToConnect, this);
         tokenThread.start();
+    }
+
+    public AddressPortPair getDnsLocation() {
+        return dns_pair;
     }
 
     private static int getPacketTypeFromClientEvent(ClientEvent eType){
