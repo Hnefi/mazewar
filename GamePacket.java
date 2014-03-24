@@ -16,9 +16,11 @@ public class GamePacket implements Serializable {
     public static final int RING_JOIN = 1;
     public static final int RING_LEAVE = 2;
     public static final int RING_REPLACE = 3;
-    public static final int RING_CONNECT_TO = 4; 
+    public static final int RING_INVALIDATE = 4;
     public static final int RING_NOP = 5;
-
+    // type signalling you are the last one in the ring
+    public static final int RING_LAST_PLAYER = 135135;
+    
     // these go in the event q
     public static final int CLIENT_MOVED_FORWARD = 101;
     public static final int CLIENT_MOVED_BACK = 102;
@@ -39,6 +41,7 @@ public class GamePacket implements Serializable {
     // this is a type only used by the lookup server to reply to
     // new client joins
     public static final int ADDR_PORT_LIST = 400;
+
 
     // default message type
     public int type = GamePacket.CLIENT_NULL;

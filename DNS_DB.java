@@ -13,6 +13,11 @@ public class DNS_DB {
         this.registry = new ArrayList<AddressPortPair>();
     }
 
+    /* used to check how many players are still in the game */
+    public int get_num_players() {
+        return registry.size();
+    }
+
     public ArrayList<AddressPortPair> get_clients_except_for(AddressPortPair me) {
         // return new instance of clients (except this one)
         ArrayList<AddressPortPair>ret_list = new ArrayList<AddressPortPair>(this.registry);

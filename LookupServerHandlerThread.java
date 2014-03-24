@@ -34,7 +34,7 @@ public class LookupServerHandlerThread implements Runnable {
             /* stream to write back to client */
             ObjectOutputStream toClient = new ObjectOutputStream(socket.getOutputStream());
 
-            while (( packetFromClient = (GamePacket) fromClient.readObject()) != null) {
+            while (( packetFromClient = (GamePacket) fromClient.readObject()) != null ) {
                 /* create a packet to send reply back to client */
                 GamePacket packetToClient = new GamePacket();
 
@@ -55,20 +55,30 @@ public class LookupServerHandlerThread implements Runnable {
                     packetToClient.pid = this.player_id;
                     packetToClient.seed = random_seed;
                 } 
+                /* Use this code to handle client leave messages. */
+                else if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.RING_LEAVE) {
+                    if (registry_db.get_num_players() == 1) {
+                        packetToClient.type = GamePacket.RING_LAST_PLAYER;
+                    } else {
+                        packetToClient.type = GamePacket.RING_NOP;
+                    }
+
+                    /* Unregister from lookup server. */
+                    InetAddress leaving_inet = socket.getInetAddress();
+                    registry_db.remove_client(leaving_inet);    
+                    send_packet = true; 
+                } 
+                /* Use to handle closing initial dns lookup connections */
+                else if (packetFromClient.type == GamePacket.RING_NOP) {
+                    gotByePacket = true;
+                    break;
+                }
                 if (send_packet){
                     /* send reply back to client */
                     toClient.writeObject(packetToClient);
 
                     /* wait for next packet */
                     continue;
-                }
-                /* Use this code to handle client leave messages. */
-                if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.RING_LEAVE) {
-                    /* Unregister from lookup server. */
-                    InetAddress leaving_inet = socket.getInetAddress();
-                    registry_db.remove_client(leaving_inet);    
-                    gotByePacket = true;
-                    break;
                 }
 
                 /* if code comes here, there is an error in the packet */
@@ -91,22 +101,7 @@ public class LookupServerHandlerThread implements Runnable {
                 e.printStackTrace();
         }
 
-        System.out.println("Thread exiting for client "+client_addr);
+        System.out.println("LookupServerHandlerThread exiting for client "+client_addr);
     }
 }
 
-// this might be useful later
-/*else if (packetFromClient.type == BrokerPacket.LOOKUP_REQUEST) {
-                    send_packet = true;
-                    //return the location of the exchange in the packet
-                    String requested_name = packetFromClient.exchange;
-                    AddressPortPair addr = registry_db.get_socket(requested_name);
-                    if (addr == null){
-                        packetToClient.type = BrokerPacket.ERROR_INVALID_EXCHANGE;
-                    } else {
-                        BrokerLocation l = new BrokerLocation( addr.addr, addr.port );
-                        packetToClient.num_locations = 1;
-                        packetToClient.locations = new BrokerLocation[]{ l };
-                    }
-                } 
-                */
