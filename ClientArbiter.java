@@ -373,9 +373,13 @@ class TokenHandlerThread extends Thread {
                 continue;
             }
 
+            boolean shouldSendPacketToClient = (tokenEvent.eventType != ClientEvent.nop);
+
             if (tokenEvent.eventType == ClientEvent.remoteLocation && !arbiter.isLocalClientName(tokenEvent.clientName)){
                 System.out.println("Creating a remote client called "+tokenEvent.clientName);
                 arbiter.createRemoteClient(tokenEvent);
+            } else {
+                shouldSendPacketToClient &= (tokenEvent.eventType != ClientEvent.remoteLocation);
             }
 
             ClientBufferQueue toClientQ = inBufMap.get(tokenEvent.clientName);
@@ -384,7 +388,7 @@ class TokenHandlerThread extends Thread {
                 continue;
             }
 
-            if (tokenEvent.eventType != ClientEvent.nop){
+            if (shouldSendPacketToClient){
                 System.out.println("TokenHandlerThread sending "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" event to client "+tokenEvent.clientName);
                 toClientQ.insertToBuf(tokenEvent);
             }
