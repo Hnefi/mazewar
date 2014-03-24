@@ -262,6 +262,7 @@ class TokenHandlerThread extends Thread {
     private final ClientArbiter arbiter;
 
     boolean firstToConnect;
+    boolean successorStreamReady = false;
     boolean cleanup_join_remnants = false;
     boolean send_locations = false;
 
@@ -435,7 +436,7 @@ class TokenHandlerThread extends Thread {
         //now pass the token on to our successor
         try {
             //System.out.println("Done everything, trying to write token out the successor stream...");
-            while (streamToSuccessor == null) {
+            while (successorStreamReady == false) {
                 // block until we get one
                 synchronized (streamToSuccessor) {
                     try { 
@@ -448,10 +449,7 @@ class TokenHandlerThread extends Thread {
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
-        } catch (NullPointerException x) {
-            System.err.println("null exception trying to write token: " + x.getMessage());
-        }
-
+        } 
         //System.out.println("Token passed.");
 
         if (cleanup_join_remnants && !firstToConnect) {
@@ -513,6 +511,8 @@ class TokenHandlerThread extends Thread {
                 succSocket = socket;
                 streamToSuccessor = to_socket;
                 streamFromSuccessor = from_socket;
+                successorStreamReady = true;
+                
                 System.out.println("We are first to connect, so replacing this successor socket immediately..... Creating blank token and putting it in my queue manually.");
                 /* Now make a new token and put it in our local queue. */
                 Token new_t = new Token();
@@ -551,6 +551,7 @@ class TokenHandlerThread extends Thread {
             succSocket = socket;
             streamToSuccessor = to_socket;
             streamFromSuccessor = from_socket;
+            successorStreamReady = true;
 
             synchronized (streamToSuccessor) {
                 streamToSuccessor.notifyAll(); // wakes any sleeping threads here.
@@ -565,6 +566,7 @@ class TokenHandlerThread extends Thread {
             succSocket = null;
             streamToSuccessor = null;
             streamFromSuccessor = null;
+            successorStreamReady = false;
             
         } else if (first_pack.type == GamePacket.RING_NOP) {
             // update successor to be this new socket (NEXT TIME)
