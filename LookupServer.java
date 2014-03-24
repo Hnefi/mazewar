@@ -8,10 +8,11 @@ public class LookupServer {
 
         boolean listening = true;
         int player_id = 0;
-
+        Integer random_seed = null;
         try {
-            if(args.length == 1) {
+            if(args.length == 2) {
                 serverSocket = new ServerSocket(Integer.parseInt(args[0]));
+                random_seed = Integer.parseInt(args[1]);
             } else {
                 System.err.println("ERROR: Invalid arguments!");
                 System.exit(-1);
@@ -24,7 +25,7 @@ public class LookupServer {
         DNS_DB registry_db = new DNS_DB();
 
         while (listening) {
-            new Thread(new LookupServerHandlerThread(serverSocket.accept(), registry_db,++player_id)).start();
+            new Thread(new LookupServerHandlerThread(serverSocket.accept(), registry_db,++player_id,random_seed)).start();
         }
         serverSocket.close();
     }

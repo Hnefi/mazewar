@@ -8,11 +8,13 @@ public class LookupServerHandlerThread implements Runnable {
     private DNS_DB registry_db = null;
     private String client_addr = null;
     private final int player_id;
+    private final int random_seed;
 
-    public LookupServerHandlerThread(Socket socket, DNS_DB reg_db,int pid) {
+    public LookupServerHandlerThread(Socket socket, DNS_DB reg_db,int pid,Integer rand) {
         this.socket = socket;
         this.registry_db = reg_db;
         this.player_id = pid;
+        this.random_seed = rand.intValue();
         System.out.println("Created new Thread to handle client");
         this.client_addr = this.socket.getRemoteSocketAddress().toString();
         System.out.println("Remote address: "+client_addr);
@@ -51,6 +53,7 @@ public class LookupServerHandlerThread implements Runnable {
                     
                     packetToClient.list_of_others = ret_list;
                     packetToClient.pid = this.player_id;
+                    packetToClient.seed = random_seed;
                 } 
                 if (send_packet){
                     /* send reply back to client */
