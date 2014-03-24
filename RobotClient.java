@@ -66,10 +66,16 @@ public class RobotClient extends LocalClient implements Runnable {
         public synchronized void registerMaze(Maze maze) {
                 assert(maze != null);
                 super.registerMaze(maze);
+        }
 
-                // Get the control thread going.
+        protected boolean spawn(DirectedPoint p) {
+            boolean ret = super.spawn(p);
+
+            if (!active){
                 active = true;
                 thread.start();
+            }
+            return ret;
         }
         
         /** 
