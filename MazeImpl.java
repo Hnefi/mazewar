@@ -276,7 +276,6 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 assert(target != null);
                 Mazewar.consolePrintLn(source.getName() + " just vaporized " + 
                                 target.getName());
-                System.out.println("Client named "+source.getName()+" killed client named "+target.getName());
                 Object o = clientMap.remove(target);
                 assert(o instanceof Point);
                 Point point = (Point)o;
@@ -368,7 +367,6 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 /* Is the point withint the bounds of maze? */
                 assert(checkBounds(newPoint));
                 
-                /* All fires should go through the server, so don't process a point-blank kill here!
                 CellImpl newCell = getCellImpl(newPoint);
                 Object contents = newCell.getContents();
                 if(contents != null) {
@@ -385,16 +383,12 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                                 return false;
                         }
                 }
-                */
                 clientFired.add(client);
                 Projectile prj = new Projectile(client);
                 
                 /* Write the new cell */
-                //projectileMap.put(prj, newPoint);
-
-                //spawn it at the client's current point; it will move once before processing if it killed anyone so you won't shoot yourself
-                projectileMap.put(prj, new DirectedPoint(point, d)); 
-                //newCell.setContents(prj);
+                projectileMap.put(prj, newPoint);
+                newCell.setContents(prj);
                 notifyClientFired(client);
                 update();
                 return true; 
