@@ -276,15 +276,16 @@ class TokenHandlerThread extends Thread {
         //Make a new socket based on predLoc
         predPortPair = predLoc;
         try {
-            /*predSocket = new Socket(predLoc.addr, predLoc.port);
-            predThread = new PredecessorThread(predSocket, fromSocketsBuf); */
+                //predSocket = new Socket(predLoc.addr, predLoc.port);
+                //predThread = new PredecessorThread(predSocket, fromSocketsBuf);
+
+                //Successor starts off as my predecessor because I need to send it join protocol packets
+                //succSocket = new Socket(predLoc.addr, predLoc.port);
 
             //Make a new server socket based on myServerPort;
             socketListener = new ServerSocket(myServerPort);
             sockThread = new ServerSocketThread(socketListener, fromSocketsBuf);
 
-            //Successor starts off as my predecessor because I need to send it join protocol packets
-            //succSocket = new Socket(predLoc.addr, predLoc.port);
         } catch (IOException e){
             System.out.println("TokenHandlerThread failed to create with message: "+e.getMessage());
             System.exit(-1);
@@ -326,6 +327,7 @@ class TokenHandlerThread extends Thread {
             replacePredecessor(token.predecessorReplaceLoc);
             token.predecessorReplaceLoc = null;
         }
+
         //now render all of the events in the token
         ArrayDeque<GamePacket> localQ = new ArrayDeque<GamePacket>();
         
@@ -437,8 +439,22 @@ class TokenHandlerThread extends Thread {
             // This new connection is going to be our successor.
             temp_port_pair = new AddressPortPair(socket.getInetAddress(),first_pack.port);
 
-            // do not update successor since this is a 1-off connection.
-            // real successor connnection will be upon sending a RING_NOP (avoids socket sharing)
+            if (firstToConnect) {
+                succSocket = socket;
+                streamToSuccessor = to_socket;
+                streamFromSuccessor = from_socket;
+
+                /* Now make a new token and put it in our local queue. */
+                Token new_t = new Token();
+                fromSocketsBuf.insertToBuf(new IncomingPacketObject(new_t,null));
+                firstToConnect = false;
+            }
+
+            // update successor to be this new socket (NEXT TIME)
+            this.next_successor_sock = socket;
+            this.next_succ_out_stream = to_socket;
+            this.next_succ_in_stream = from_socket;
+            
             try {
                 to_socket.close();
                 from_socket.close();
@@ -486,35 +502,34 @@ class TokenHandlerThread extends Thread {
         //  [3] Wait for your successor to send you a socket on your server port.
         //  [4] You now have your successor's socket, so open streams and use it as your successor from now on.
         //  [5] The first time you get the token, we can render all the locations (this is handled elsewhere).
-       
-        Socket my_successor = null;
-        ObjectOutputStream successor_out = null;
-        ObjectInputStream successor_in = null;
-
+     
         GamePacket join_pack = new GamePacket();
         join_pack.type = GamePacket.RING_JOIN;
         join_pack.port = myServerPort;
+        /*
+        Socket to_my_pred = null;
+        ObjectOutputStream stream_to_pred = null;
+        ObjectInputStream stream_from_pred = null;
+
 
         try { 
-           my_successor = new Socket(predPortPair.addr,predPortPair.port); 
-           successor_out = new ObjectOutputStream(my_successor.getOutputStream());
-           successor_in = new ObjectInputStream(my_successor.getInputStream());
+           to_my_pred = new Socket(predPortPair.addr,predPortPair.port); 
+           stream_to_pred = new ObjectOutputStream(my_successor.getOutputStream());
+           stream_from_pred = new ObjectInputStream(my_successor.getInputStream());
 
-           successor_out.writeObject(join_pack);
+           stream_to_pred.writeObject(join_pack);
         } catch (IOException x) {
             System.err.println("IOException in creating socket & streams to ring entry point (in join protocol): " + x.getMessage());
         }
-
+        */
         /* Now we can create a predecessor thread for this join point (it will send a ring_nop as first operation) */
         try { 
             predSocket = new Socket(predPortPair.addr,predPortPair.port);
         } catch (IOException x) {
             System.err.println("IOException in creating predSocket (in join protocol): " + x.getMessage());
         }
-        GamePacket first_pack = new GamePacket();
-        first_pack.type = GamePacket.RING_NOP;
 
-        predThread = new PredecessorThread(predSocket,fromSocketsBuf,first_pack);
+        predThread = new PredecessorThread(predSocket,fromSocketsBuf,join_pack);
         predThread.start();
 
         /* Our predecessor is now set..... This is the end of our "join protocol initiate", but more is to be done when
