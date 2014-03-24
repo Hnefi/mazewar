@@ -331,8 +331,6 @@ class TokenHandlerThread extends Thread {
     }
 
     private void handleToken(Token token){
-            
-        System.out.println("Handling Token with qsize: "+token.getEventQSize());
         //System.out.println("Thread ID #"+Thread.currentThread().getId()+" processing a token.");
         //if our predecessor is leaving, it tells us where to open the new connection to
         if (token.predecessorReplaceLoc != null){
@@ -409,6 +407,10 @@ class TokenHandlerThread extends Thread {
             }                  
             localQ.add(toQ);
         }
+        if (token.getEventQSize() != 0){
+            System.out.println("OH NOES! I left "+token.getEventQSize()+"Events unprocessed for some reason!!!");
+            System.exit(-1);
+        }
 
         //Now pull from the special arbiter buffer looking for join packets
         while ((fromQ = arbiter.getPacketFromArbQ()) != null){
@@ -427,7 +429,6 @@ class TokenHandlerThread extends Thread {
         //now pass the token on to our successor
         try {
             //System.out.println("Done everything, trying to write token out the successor stream...");
-            System.out.println("Sending Token with qsize: "+token.getEventQSize());
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
