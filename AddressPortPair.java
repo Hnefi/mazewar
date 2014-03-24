@@ -2,7 +2,7 @@ import java.util.*;
 import java.io.*;
 import java.net.*;
 
-public class AddressPortPair {
+public class AddressPortPair implements Serializable {
     public InetAddress addr = null;
     public int port = -1;
     public AddressPortPair(InetAddress inAddr, int inPort){

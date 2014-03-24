@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Random;
-import java.net.InetAddress;
+import java.net.*;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -133,8 +133,11 @@ class PredecessorThread extends Thread {
         ObjectOutputStream toPred = null;
         ObjectInputStream fromPred = null;
         try {
+            System.out.println("New predThread attempting to open i/o streams.");
             toPred = new ObjectOutputStream(predSocket.getOutputStream());
+            toPred.flush();
             fromPred = new ObjectInputStream(predSocket.getInputStream());
+            System.out.println("Opened streams successfully.");
         } catch (IOException x) {
             System.err.println("PredecessorThread couldn't open input stream with message: " + x.getMessage());
         }
@@ -143,7 +146,7 @@ class PredecessorThread extends Thread {
         try {// write first "setup" packet
             toPred.writeObject(first_pack);
         } catch (IOException x) {
-            System.err.println("PredThread couldn't send RING_NOP first packet." + x.getMessage());
+            System.err.println("PredThread couldn't send RING_* first packet." + x.getMessage());
         }
 
         //Main Loop
@@ -193,8 +196,9 @@ class ServerSocketThread extends Thread {
             Socket sock = null;
             try {
                 sock = server.accept();
+                System.out.println("Server socket just returned a new connection from: " + sock.getInetAddress().toString() + " on port : " + sock.getPort());
             } catch (IOException x) {
-                System.err.println("ServerSocketThread couldn't open input stream with message: " + x.getMessage());
+                System.err.println("ServerSocketThread couldn't accept new connect with message: " + x.getMessage());
             }
             System.out.println("ServerSocketThread got new Input stream successfully.");
             assert(sock != null);
@@ -213,6 +217,7 @@ class ServerSocketThread extends Thread {
             //We can't actually read the packet here though - since the TokenHandlerThread may need to keep communicating with this socket,
             //it has to be the one to open the Object streams!
             toHandlerBuf.insertToBuf(new IncomingPacketObject(null, sock));
+            System.out.println("Server socket put a new IncomingPacketObject (obviously a new connection socket) in the token handler queue!");
         }
         try{
             server.close();
@@ -274,6 +279,16 @@ class TokenHandlerThread extends Thread {
         this.fromSocketsBuf = new TokenHandlerQueue();
 
         //Make a new socket based on predLoc
+        try{
+            System.out.println("New token handler thread being made with InetAddr: " + InetAddress.getLocalHost() + " and local listen port: " + servPort);
+        } catch (UnknownHostException x) {
+            System.err.println("Coudln't get my own local host.... for some reason....");
+        }
+        if (firstToConnect) {
+            System.out.println(" ------ This guy is the first guy to connect!! ------ ");
+        }
+        System.out.println("Location we are going to join on is: " + predLoc.addr.toString() + ":" + predLoc.port);
+
         predPortPair = predLoc;
         try {
                 //predSocket = new Socket(predLoc.addr, predLoc.port);
@@ -285,6 +300,7 @@ class TokenHandlerThread extends Thread {
             //Make a new server socket based on myServerPort;
             socketListener = new ServerSocket(myServerPort);
             sockThread = new ServerSocketThread(socketListener, fromSocketsBuf);
+            sockThread.start();
 
         } catch (IOException e){
             System.out.println("TokenHandlerThread failed to create with message: "+e.getMessage());
@@ -301,8 +317,9 @@ class TokenHandlerThread extends Thread {
 
         //Now wait for something from the queue
         while(!isInterrupted()){
+            System.out.println("Token handler thread going to sleep on the queue.....");
             IncomingPacketObject packet = fromSocketsBuf.takeFromBuf(); //blocks until there's something there
-
+            System.out.println("Token handler woke up!!! I wonder wat's in the q?!");
             if (packet.token != null){
                 handleToken(packet.token);
             } else if (packet.socket != null){
@@ -414,11 +431,15 @@ class TokenHandlerThread extends Thread {
         // this gets called whenever the serverSocket passes us a new socket object, need to block on it and wait to 
         // determine what kind of connection this was. this socket belongs to us, so we can do this w/o worrying about
         // stream sharing between threads (which is bad)
+        System.out.println("Got into handleSocket()....");
         ObjectInputStream from_socket = null;
         ObjectOutputStream to_socket = null;
         try {
+            System.out.println("Opening new streams in handleSocket()");
             to_socket = new ObjectOutputStream(socket.getOutputStream());
+            to_socket.flush();
             from_socket = new ObjectInputStream(socket.getInputStream()); 
+            System.out.println("Streams opened successfully.");
         } catch (IOException x) {
             System.err.println("IOException creating streams in handleSocket() fcn: " + x.getMessage());
         }
@@ -439,33 +460,33 @@ class TokenHandlerThread extends Thread {
             // This new connection is going to be our successor.
             temp_port_pair = new AddressPortPair(socket.getInetAddress(),first_pack.port);
 
+            System.out.println("Received socket with first packet RING_JOIN, our new successor will be: " + socket.getInetAddress().toString() + " : " + first_pack.port);
+
+
             if (firstToConnect) {
                 succSocket = socket;
                 streamToSuccessor = to_socket;
                 streamFromSuccessor = from_socket;
-
+                System.out.println("We are first to connect, so replacing this successor socket immediately..... Creating blank token and putting it in my queue manually.");
                 /* Now make a new token and put it in our local queue. */
                 Token new_t = new Token();
                 fromSocketsBuf.insertToBuf(new IncomingPacketObject(new_t,null));
                 firstToConnect = false;
+                return;
             }
 
             // update successor to be this new socket (NEXT TIME)
             this.next_successor_sock = socket;
             this.next_succ_out_stream = to_socket;
             this.next_succ_in_stream = from_socket;
-            
-            try {
-                to_socket.close();
-                from_socket.close();
-                socket.close();
-            } catch (IOException x) {
-                System.err.println("IOException attempting to close socket after a RING_JOIN in handleSocket()" + x.getMessage());
-            }
+           
         } else if (first_pack.type == GamePacket.RING_REPLACE) {
             /* This is triggered on both join/leave, and it just tells us to replace our successor with THIS thing that
              * just connected to us.
              */
+
+            System.out.println("Received socket with first packet RING_REPLACE, our new successor will be: " + socket.getInetAddress().toString());
+
             try {
                 if (streamToSuccessor != null) {
                     streamToSuccessor.close();
@@ -476,12 +497,14 @@ class TokenHandlerThread extends Thread {
                 if (succSocket != null) {
                     succSocket.close();
                 }
+                System.out.println("Successfully closed old successor sockets....");
             } catch (IOException x) {
                 System.err.println("IOException closing old successor networking primitives on receiving RING_REPLACE. " + x.getMessage());
             }
             succSocket = socket;
             streamToSuccessor = to_socket;
             streamFromSuccessor = from_socket;
+            System.out.println("Replaced all successor sockets and streams, my work here is done......");
         } else if (first_pack.type == GamePacket.RING_NOP) {
             // update successor to be this new socket (NEXT TIME)
             this.next_successor_sock = socket;
@@ -528,7 +551,7 @@ class TokenHandlerThread extends Thread {
         } catch (IOException x) {
             System.err.println("IOException in creating predSocket (in join protocol): " + x.getMessage());
         }
-
+        System.out.println("Join protocol is making a new predThread which will send a RING_JOIN back to " +predPortPair.addr.toString() + " : " + predPortPair.port + ". Server port of new client is " + join_pack.port);
         predThread = new PredecessorThread(predSocket,fromSocketsBuf,join_pack);
         predThread.start();
 
@@ -542,6 +565,7 @@ class TokenHandlerThread extends Thread {
         //open connection to the new predecessor location
         predThread.interrupt();
         try {
+            System.out.println("Killed old predThread... Now making new socket to the following address: " + newPred.addr.toString() + " : " + newPred.port);
             predSocket = new Socket(newPred.addr,newPred.port);
         } catch (IOException x) {
             System.err.println("Error creating new socket in updatePredecessor. " + x.getMessage());
@@ -550,6 +574,7 @@ class TokenHandlerThread extends Thread {
         first_pack.type = GamePacket.RING_REPLACE;
         predThread = new PredecessorThread(predSocket,fromSocketsBuf,first_pack);
         predThread.start();
+        System.out.println("Made new thread object, it will send RING_REPLACE to the above socket address (already printed).");
     }
 
     private void initiateLeaveProtocol(Token token){
