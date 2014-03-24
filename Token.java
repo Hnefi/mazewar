@@ -28,6 +28,10 @@ public class Token implements Serializable {
         eventQ.add(p);
     }
 
+    public int getEventQSize(){
+        return eventQ.size();
+    }
+
     /* Setter method for re-initializing the events queue to the passed in
      * data structure.
      */

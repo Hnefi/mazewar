@@ -331,6 +331,8 @@ class TokenHandlerThread extends Thread {
     }
 
     private void handleToken(Token token){
+            
+        System.out.println("Handling Token with qsize: "+token.getEventQSize());
         //System.out.println("Thread ID #"+Thread.currentThread().getId()+" processing a token.");
         //if our predecessor is leaving, it tells us where to open the new connection to
         if (token.predecessorReplaceLoc != null){
@@ -380,8 +382,10 @@ class TokenHandlerThread extends Thread {
             }
 
             ClientBufferQueue toClientQ = inBufMap.get(tokenEvent.clientName);
-            if (toClientQ == null){ 
-                System.out.println("Dropping packet of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" talking about unknown client "+tokenEvent.clientName);
+            if (toClientQ == null){
+                if (tokenEvent.eventType != ClientEvent.nop){ 
+                    System.out.println("Dropping packet of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" talking about unknown client "+tokenEvent.clientName);
+                }
                 shouldSendPacketToClient = false;
             }
 
@@ -423,6 +427,7 @@ class TokenHandlerThread extends Thread {
         //now pass the token on to our successor
         try {
             //System.out.println("Done everything, trying to write token out the successor stream...");
+            System.out.println("Sending Token with qsize: "+token.getEventQSize());
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
