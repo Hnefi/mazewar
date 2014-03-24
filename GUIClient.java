@@ -21,6 +21,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Iterator;
 
 class actionKey {
 
@@ -61,6 +62,8 @@ public class GUIClient extends LocalClient implements KeyListener {
         private static final int INVERT = 1;
         private static final int LEFT = 2;
         private static final int RIGHT = 3;
+
+        private static final String[] robotNames = {"blinky", "inky", "dad"};
 
         /**
          * Create a GUI controlled {@link LocalClient}.  
@@ -130,6 +133,26 @@ public class GUIClient extends LocalClient implements KeyListener {
                 // Spacebar fires.
                 } else if(keyCode == KeyEvent.VK_SPACE && maze.clientCanFire(this)) {
                         arbiter.requestLocalClientEvent(this, ClientEvent.fire);
+                //r key spawns a new robot
+                } else if ((keyPress == 'r') || (keyPress == 'R')){
+                    for (String robotName : robotNames){
+                        boolean nameExists = false;
+                        Iterator i = maze.getClients();
+                        while(i.hasNext()){
+                            Object o = i.next();
+                            assert(o instanceof Client);
+                            Client c = (Client) o;
+                            if(c.getName().equals(robotName)){
+                                nameExists = true;
+                                break;
+                            }
+                        }
+                        if (!nameExists){
+                            RobotClient newRob = new RobotClient(robotName);
+                            arbiter.addLocalClient(newRob);
+                            break; 
+                        } 
+                    }
                 }
         }
         
