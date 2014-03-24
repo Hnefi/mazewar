@@ -109,8 +109,11 @@ public class GUIClient extends LocalClient implements KeyListener {
                 };
                 // If the user pressed Q, invoke the cleanup code and quit. 
                 if((keyPress == 'q') || (keyPress == 'Q')){
+                        System.out.println("Thread ID #"+Thread.currentThread().getId()+" requesting to leave the game :(");
                         arbiter.requestLocalClientEvent(this, ClientEvent.leave);
+                        System.out.println("Thread ID #"+Thread.currentThread().getId()+" received request, waiting for permission to die");
                         arbiter.waitUntilDieSignal();
+                        System.out.println("Thread ID #"+Thread.currentThread().getId()+" turning off the lights...");
                         Mazewar.quit();
                 // Up-arrow moves forward.
                 } else if(action == FORWARD && maze.clientCanMoveForward(this)) {
