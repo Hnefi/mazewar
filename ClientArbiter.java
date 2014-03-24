@@ -467,6 +467,10 @@ class TokenHandlerThread extends Thread {
             cleanup_join_remnants = false;
         }
         firstToConnect = false;
+        if (weAreLeaving){
+            arbiter.signalDie();
+            interrupt();
+        }
     }
 
     private void handleSocket(Socket socket){
@@ -667,6 +671,7 @@ class TokenHandlerThread extends Thread {
 
         /* Now handle the case where we are the LAST one to leave the ring. interrupt myself and die */
         if (packet_w_status.type == GamePacket.RING_LAST_PLAYER) {
+            arbiter.signalDie();
             interrupt();
             return;
         }
@@ -736,6 +741,7 @@ public class ClientArbiter {
         outBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
         inBufferMap = new ConcurrentHashMap<String, ClientBufferQueue>();
         arbiterBuffer = new ClientBufferQueue(null);
+        dieBuffer = new ClientBufferQueue(null);
 
         boolean firstToConnect = false;
         //#1: Contact the DNS to find everyone else's address/port
@@ -967,13 +973,13 @@ public class ClientArbiter {
     }
 
     public void signalDie(){
-        dieBuffer.put(new GamePacket());
+        dieBuffer.insertToBuf(new ClientQueueObject(null, null, null, null, null, null));
     }
 
     public void waitUntilDieSignal(){
-        GamePacket diePacket = null;
+        ClientQueueObject diePacket = null;
         while (diePacket == null){
-            diePacket = dieBuffer.take();
+            diePacket = dieBuffer.takeFromBuf();
         }
     }
 
