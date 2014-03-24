@@ -699,10 +699,6 @@ class TokenHandlerThread extends Thread {
         }
 
         token.predecessorReplaceLoc = predPortPair; // saved already
-
-        // can kill our predecessor thread (since nothing is blocking on that from the other side of the socket)
-        predThread.interrupt();
-        predThread = null;
     }
 }
 
