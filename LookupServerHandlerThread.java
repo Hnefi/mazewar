@@ -27,13 +27,14 @@ public class LookupServerHandlerThread implements Runnable {
         String player_name = null;
 
         try {
-            /* stream to read from client */
-            ObjectInputStream fromClient = new ObjectInputStream(socket.getInputStream());
-            GamePacket packetFromClient;
-
             /* stream to write back to client */
             ObjectOutputStream toClient = new ObjectOutputStream(socket.getOutputStream());
+            toClient.flush();
 
+            /* stream to read from client */
+
+            ObjectInputStream fromClient = new ObjectInputStream(socket.getInputStream());
+            GamePacket packetFromClient;
             while (( packetFromClient = (GamePacket) fromClient.readObject()) != null ) {
                 /* create a packet to send reply back to client */
                 GamePacket packetToClient = new GamePacket();
@@ -57,6 +58,7 @@ public class LookupServerHandlerThread implements Runnable {
                 } 
                 /* Use this code to handle client leave messages. */
                 else if (packetFromClient.type == GamePacket.CLIENT_NULL || packetFromClient.type == GamePacket.RING_LEAVE) {
+                    System.out.println("Number of players in RING_LEAVE: " + registry_db.get_num_players());
                     if (registry_db.get_num_players() == 1) {
                         packetToClient.type = GamePacket.RING_LAST_PLAYER;
                     } else {
@@ -66,8 +68,7 @@ public class LookupServerHandlerThread implements Runnable {
                     /* Unregister from lookup server. */
                     InetAddress leaving_inet = socket.getInetAddress();
                     registry_db.remove_client(leaving_inet);    
-                    toClient.writeObject(packetToClient);
-                    break;
+                    send_packet = true;
                 } 
                 /* Use to handle closing initial dns lookup connections */
                 else if (packetFromClient.type == GamePacket.RING_NOP) {
