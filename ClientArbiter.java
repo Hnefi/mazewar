@@ -424,7 +424,7 @@ class TokenHandlerThread extends Thread {
 
         //only ever initiated by a GUI client and starts everything shutting down!
         if (weAreLeaving){
-            initiateLeaveProtocol(token); //this thread dies in here
+            initiateLeaveProtocol(token); //this thread dies in here (not necessarily)
         } else if (pushAllClientsLeaving){
             arbiter.pushAllLocalClientsLeaving(localQ);
         }
@@ -557,6 +557,7 @@ class TokenHandlerThread extends Thread {
             /* Need to assign all our successor variables to NULL (will cause any tokens getting here to stall)
              * until we get a ring_replace to re-construct them.
              */
+            System.out.println("Got a ring invalidate, setting all of my successor variables to NULL.");
             succSocket = null;
             streamToSuccessor = null;
             streamFromSuccessor = null;
@@ -658,10 +659,8 @@ class TokenHandlerThread extends Thread {
 
         /* Now handle the case where we are the LAST one to leave the ring. interrupt myself and die */
         if (packet_w_status.type == GamePacket.RING_LAST_PLAYER) {
-            System.out.println("We are last!!!");
             interrupt();
             return;
-            // need to de-render maze or somehow signal the arbiter to die (this automaticaly happens)
         }
       
         Socket sock = null;

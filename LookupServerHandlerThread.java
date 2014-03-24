@@ -66,7 +66,8 @@ public class LookupServerHandlerThread implements Runnable {
                     /* Unregister from lookup server. */
                     InetAddress leaving_inet = socket.getInetAddress();
                     registry_db.remove_client(leaving_inet);    
-                    send_packet = true; 
+                    toClient.writeObject(packetToClient);
+                    break;
                 } 
                 /* Use to handle closing initial dns lookup connections */
                 else if (packetFromClient.type == GamePacket.RING_NOP) {
