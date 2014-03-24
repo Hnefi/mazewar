@@ -415,10 +415,14 @@ class TokenHandlerThread extends Thread {
 
         //now pass the token on to our successor
         try {
+            //System.out.println("Done everything, trying to write token out the successor stream...");
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
+        } catch (NullPointerException x) {
+            System.err.println("null exception trying to write token: " + x.getMessage());
         }
+
         //System.out.println("Token passed.");
 
         if (cleanup_join_remnants && !firstToConnect) {
@@ -432,8 +436,8 @@ class TokenHandlerThread extends Thread {
             next_successor_sock = null;
 
             cleanup_join_remnants = false;
-            firstToConnect = false;
         }
+        firstToConnect = false;
     }
 
     private void handleSocket(Socket socket){
@@ -481,6 +485,7 @@ class TokenHandlerThread extends Thread {
                 Token new_t = new Token();
                 fromSocketsBuf.insertToBuf(new IncomingPacketObject(new_t,null));
                 send_locations = false;
+                cleanup_join_remnants = false;
                 return;
             }
 
