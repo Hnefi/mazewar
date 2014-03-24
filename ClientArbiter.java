@@ -164,10 +164,8 @@ class PredecessorThread extends Thread {
             }
             assert(tokenFromPred != null);
 
-            //System.out.println("PredecessorThread received a token! Putting in the TokenHandlerQueue...");
             //Send the token to the TokenHandlerThread
             toHandlerBuf.insertToBuf(new IncomingPacketObject(tokenFromPred, null));
-            //System.out.println("Token passed into the TokenHandlerQueue...");
         }
         try{
             toPred.close();
@@ -260,7 +258,7 @@ class TokenHandlerThread extends Thread {
 
     private ServerSocket socketListener;
 
-    //Arbiter handles ....something?
+    //Arbiter handles join/drop protocols and sending locations to joining machines
     private final ClientArbiter arbiter;
 
     boolean firstToConnect;
@@ -294,13 +292,6 @@ class TokenHandlerThread extends Thread {
 
         predPortPair = predLoc;
         try {
-                //predSocket = new Socket(predLoc.addr, predLoc.port);
-                //predThread = new PredecessorThread(predSocket, fromSocketsBuf);
-
-                //Successor starts off as my predecessor because I need to send it join protocol packets
-                //succSocket = new Socket(predLoc.addr, predLoc.port);
-
-            //Make a new server socket based on myServerPort;
             socketListener = new ServerSocket(myServerPort);
             sockThread = new ServerSocketThread(socketListener, fromSocketsBuf);
             sockThread.start();
@@ -320,10 +311,7 @@ class TokenHandlerThread extends Thread {
 
         //Now wait for something from the queue
         while(!isInterrupted()){
-            //System.out.println("Token handler thread going to sleep on the queue.....");
-            //System.out.println("TokenHandlerThread checking for actions...");
             IncomingPacketObject packet = fromSocketsBuf.takeFromBuf(); //blocks until there's something there
-            //System.out.println("Token handler woke up!!! I wonder wat's in the q?!");
             if (packet.token != null){
                 handleToken(packet.token);
             } else if (packet.socket != null){
@@ -397,7 +385,6 @@ class TokenHandlerThread extends Thread {
 
             if (arbiter.isLocalClientName(tokenEvent.clientName)){
                 ClientBufferQueue fromClientQ = outBufMap.get(tokenEvent.clientName);
-                //System.out.println("Looking for an event from LocalClient "+tokenEvent.clientName);
                 ClientQueueObject clientEvent = fromClientQ.takeFromBufNonBlocking();
                 if (clientEvent != null){
                     System.out.println("Received an event "+ClientArbiter.clientEventAsString(clientEvent.eventType)+" from client "+clientEvent.clientName);
@@ -406,7 +393,6 @@ class TokenHandlerThread extends Thread {
                     }
                     toQ = ClientArbiter.getPacketFromClientQ(clientEvent);
                 } else {
-                    //System.out.println("Received a null event for client"+tokenEvent.clientName);
                     toQ = ClientArbiter.generateNopPacket(tokenEvent.clientName);
                 }
             }                  
