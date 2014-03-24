@@ -364,6 +364,9 @@ class TokenHandlerThread extends Thread {
             }
 
             boolean shouldSendPacketToClient = (tokenEvent.eventType != ClientEvent.nop);
+            if (shouldSendPacketToClient){
+                System.out.println("Handling token event of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" for client "+tokenEvent.clientName);
+            }
 
             if ((tokenEvent.eventType == ClientEvent.join || tokenEvent.eventType == ClientEvent.remoteLocation) && !arbiter.isLocalClientName(tokenEvent.clientName)){
                 System.out.println("Creating a remote client called "+tokenEvent.clientName);
@@ -1034,7 +1037,6 @@ public class ClientArbiter {
             locPacket.player_name = c.getName();
             locPacket.location = new DirectedPoint(c.getPoint(), c.getOrientation());
             locPacket.score = maze.getClientScore(c);
-            System.out.println("Adding location of client "+c.getName()+" and score "+locPacket.score);
             queue.add(locPacket); 
         }
         return queue; 
