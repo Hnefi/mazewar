@@ -375,7 +375,7 @@ class TokenHandlerThread extends Thread {
 
             boolean shouldSendPacketToClient = (tokenEvent.eventType != ClientEvent.nop);
 
-            if (tokenEvent.eventType == ClientEvent.remoteLocation && !arbiter.isLocalClientName(tokenEvent.clientName)){
+            if ((tokenEvent.eventType == ClientEvent.join || tokenEvent.eventType == ClientEvent.remoteLocation) && !arbiter.isLocalClientName(tokenEvent.clientName)){
                 System.out.println("Creating a remote client called "+tokenEvent.clientName);
                 arbiter.createRemoteClient(tokenEvent);
             } else {
@@ -384,7 +384,7 @@ class TokenHandlerThread extends Thread {
 
             ClientBufferQueue toClientQ = inBufMap.get(tokenEvent.clientName);
             if (toClientQ == null){ 
-                System.out.println("Dropping packet talking about unknown client "+tokenEvent.clientName);
+                System.out.println("Dropping packet of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+"talking about unknown client "+tokenEvent.clientName);
                 continue;
             }
 
@@ -1025,6 +1025,8 @@ public class ClientArbiter {
             c.kill(target);
         } else if (ce == ClientEvent.leave) {
             c.leave();
+        } else if (ce == ClientEvent.join) {
+            //do nothing if you receive your join packet back
         } else {
             System.out.println("WARNING: Thread ID #" + Thread.currentThread().getId() + " processed unhandled event " + clientEventAsString(ce));
         }
