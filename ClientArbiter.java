@@ -317,9 +317,9 @@ class TokenHandlerThread extends Thread {
 
         //Now wait for something from the queue
         while(!isInterrupted()){
-            System.out.println("Token handler thread going to sleep on the queue.....");
+            //System.out.println("Token handler thread going to sleep on the queue.....");
             IncomingPacketObject packet = fromSocketsBuf.takeFromBuf(); //blocks until there's something there
-            System.out.println("Token handler woke up!!! I wonder wat's in the q?!");
+            //System.out.println("Token handler woke up!!! I wonder wat's in the q?!");
             if (packet.token != null){
                 handleToken(packet.token);
             } else if (packet.socket != null){
@@ -350,13 +350,14 @@ class TokenHandlerThread extends Thread {
         
         //If we've just added a new machine, we need to send the locations of all our clients around to those machines
         //before any events get processed
-        if (cleanup_join_remnants){
+        if (cleanup_join_remnants && !firstToConnect){
             arbiter.addAllClientLocations(localQ);
         }
 
         //Now start extracting events from the Token and handling them
         GamePacket fromQ = null;
         boolean weAreLeaving = false;
+        firstToConnect = false; // this is so we don't try to render old clients that aren't there.....
         while ((fromQ = token.takeFromQ()) != null){
             GamePacket toQ = fromQ;
 
@@ -477,7 +478,6 @@ class TokenHandlerThread extends Thread {
                 /* Now make a new token and put it in our local queue. */
                 Token new_t = new Token();
                 fromSocketsBuf.insertToBuf(new IncomingPacketObject(new_t,null));
-                firstToConnect = false;
                 return;
             }
 
@@ -1033,6 +1033,7 @@ public class ClientArbiter {
         System.out.println("Arbiter: Adding client with name " + c.getName());
         clientNameMap.put(c.getName(), c);
         inBufferMap.put(c.getName(), new ClientBufferQueue(c.getName()));
+        outBufferMap.put(c.getName(),new ClientBufferQueue(c.getName())); // added to fix null ptr exception on first client join
         c.registerArbiter(this);
     }
 
