@@ -343,15 +343,18 @@ class TokenHandlerThread extends Thread {
         
         //If we've just added a new machine, we need to send the locations of all our clients around to those machines
         //before any events get processed
-        if (cleanup_join_remnants && send_locations){
+        if (send_locations){
             int qSize = localQ.size();
             System.out.println("Queue size before adding locations: "+qSize);
             localQ = arbiter.addAllClientLocations(localQ);
             qSize = localQ.size();
             System.out.println("Queue size after adding locations: "+qSize);
+            send_locations = false;
+        }
+        if (cleanup_join_remnants && !firstToConnect) {
+            send_locations = true;
             token.predecessorReplaceLoc = temp_port_pair;
             temp_port_pair = null;
-            send_locations = false;
         }
 
         //Now start extracting events from the Token and handling them
@@ -365,6 +368,10 @@ class TokenHandlerThread extends Thread {
             if (tokenEvent.clientName == null){
                 System.out.println("OH NOES! Null player name in the Token???? type = "+ClientArbiter.clientEventAsString(tokenEvent.eventType));
                 continue;
+            }
+
+            if (tokenEvent.eventType == ClientEvent.remoteLocation){
+                System.out.println("Saw an event of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" for client "+tokenEvent.clientName);
             }
 
             boolean shouldSendPacketToClient = (tokenEvent.eventType != ClientEvent.nop);
@@ -482,7 +489,7 @@ class TokenHandlerThread extends Thread {
         // process the first packet we got back
         if (first_pack.type == GamePacket.RING_JOIN) {
             cleanup_join_remnants = true; // for next time we get token
-            send_locations = true;
+            //send_locations = true;
             // This new connection is going to be our successor.
             temp_port_pair = new AddressPortPair(socket.getInetAddress(),first_pack.port);
 
