@@ -107,6 +107,16 @@ public abstract class Maze {
      */
     public abstract void removeClient(Client client);
 
+    /**
+     * Set a client's score to a specified amount
+     */
+    public abstract void setClientScore(Client client, int score);
+
+    /**
+     * Get a client's score
+     */
+    public abstract int getClientScore(Client client);
+
     /** 
      * Find out where a specified {@link Client} is located 
      * in the {@link Maze}.

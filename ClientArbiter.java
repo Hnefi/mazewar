@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Random;
+import java.net.InetAddress;
 
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -623,12 +624,14 @@ public class ClientArbiter {
         ArrayList<AddressPortPair> other_players = packet_w_locations.list_of_others;
         if(other_players == null || other_players.isEmpty()) { // we are the first
             firstToConnect = true;
+            try {
+                predLocation = new AddressPortPair(InetAddress.getLocalHost(), myPort);
+            } catch (java.net.UnknownHostException e) {
+                System.out.println("Couldn't get local host name with message "+e.getMessage());
+                System.exit(-1);
+            }
         } else { // pick a client to "join on"
-            //Random gen = new Random();
-            //if (other_players.size() == 1) {
-                predLocation = other_players.get(0);
-            //}
-            //predLocation = other_players.get(gen.nextInt(other_players.size()-1));
+            predLocation = other_players.get(0);
         }
 
         try {
@@ -642,10 +645,6 @@ public class ClientArbiter {
         //Construct the TokenHandlerThread, which will establish itself in the Ring
         tokenThread = new TokenHandlerThread(outBufferMap, inBufferMap, predLocation, myPort, firstToConnect, this);
         tokenThread.start();
-
-        //Once the RingThread is inside the ring network, it will send us a message that it's OK to start a new Client
-        //ClientQueueObject canJoin = arbiterBuffer.takeFromBuf();
-        //assert(canJoin != null && canJoin.eventType == ClientEvent.clientProceed);
     }
 
     private static int getPacketTypeFromClientEvent(ClientEvent eType){
@@ -770,11 +769,13 @@ public class ClientArbiter {
 
         String remoteName = q.targetName;
         DirectedPoint remotePoint = q.dPoint;
+        int score = q.score;
 
         Client existingClient = clientNameMap.get(remoteName);
         if (existingClient == null){
             RemoteClient rClient = maze.createRemoteClient(remoteName);
             maze.spawnClient(rClient, remotePoint); 
+            maze.setClientScore(rClient, score);
         }
     }
 
@@ -959,7 +960,14 @@ public class ClientArbiter {
     }
 
     public void addAllClientLocations(ArrayDeque<GamePacket> queue){
-
+        for (Client c : clientNameMap.values()){
+            GamePacket locPacket = new GamePacket();
+            locPacket.type = GamePacket.CLIENT_REMOTE_LOC;
+            locPacket.player_name = c.getName();
+            locPacket.location = new DirectedPoint(c.getPoint(), c.getOrientation());
+            locPacket.score = maze.getClientScore(c);
+            queue.add(locPacket); 
+        } 
     }
 
     public void addClient(Client c){

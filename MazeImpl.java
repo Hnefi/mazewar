@@ -219,7 +219,25 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                 client.addClientListener(this);
                 arbiter.addClient(client);
                 notifyClientAdd(client);
-        }   
+        }  
+
+        public synchronized void setClientScore(Client client, int score){
+                notifyClientScoreSet(client, score);
+        }
+
+        public synchronized int getClientScore(Client c){
+                assert(c != null);
+                int score = 0;
+                Iterator i = listenerSet.iterator();
+                while(i.hasNext()){
+                    Object o = i.next();
+                    if(o instanceof ScoreTableModel){
+                            ScoreTableModel ml = (ScoreTableModel)o;
+                            score = ml.getClientScore(c);
+                    }
+                }
+                return score;
+        } 
 
         public synchronized void randomSpawnClient(LocalClient client){
                 requestRandomSpawnClient(client);
@@ -795,6 +813,17 @@ public class MazeImpl extends Maze implements Serializable, ClientListener, Runn
                         MazeListener ml = (MazeListener)o;
                         ml.clientKilled(source, target);
                 } 
+        }
+
+        private void notifyClientScoreSet(Client c, int newScore) {
+                assert(c != null);
+                Iterator i = listenerSet.iterator();
+                while(i.hasNext()){
+                    Object o = i.next();
+                    assert(o instanceof MazeListener);
+                            MazeListener ml = (MazeListener)o;
+                            ml.clientScoreSet(c, newScore);
+                }       
         }
         
         /**

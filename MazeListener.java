@@ -61,5 +61,7 @@ public interface MazeListener {
          * @param dPoint Point at which the client spawned
          */
         void clientSpawned(Client client, DirectedPoint dPoint);
+
+        void clientScoreSet(Client client, int score);
         
 }
