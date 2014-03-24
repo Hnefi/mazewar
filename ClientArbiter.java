@@ -344,7 +344,11 @@ class TokenHandlerThread extends Thread {
         //If we've just added a new machine, we need to send the locations of all our clients around to those machines
         //before any events get processed
         if (cleanup_join_remnants && send_locations){
+            int qSize = localQ.size();
+            System.out.println("Queue size before adding locations: "+qSize);
             localQ = arbiter.addAllClientLocations(localQ);
+            qSize = localQ.size();
+            System.out.println("Queue size after adding locations: "+qSize);
             token.predecessorReplaceLoc = temp_port_pair;
             temp_port_pair = null;
             send_locations = false;
@@ -378,7 +382,7 @@ class TokenHandlerThread extends Thread {
             ClientBufferQueue toClientQ = inBufMap.get(tokenEvent.clientName);
             if (toClientQ == null){ 
                 System.out.println("Dropping packet of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" talking about unknown client "+tokenEvent.clientName);
-                continue;
+                shouldSendPacketToClient = false;
             }
 
             if (shouldSendPacketToClient){
