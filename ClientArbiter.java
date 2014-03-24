@@ -978,6 +978,7 @@ public class ClientArbiter {
     }
 
     public void waitUntilDieSignal(){
+        System.out.println("Thread ID #"+Thread.currentThread().getId()+" waiting for arbiter die signal");
         ClientQueueObject diePacket = null;
         while (diePacket == null){
             diePacket = dieBuffer.takeFromBuf();
