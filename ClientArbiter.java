@@ -374,6 +374,7 @@ class TokenHandlerThread extends Thread {
             }
 
             if (tokenEvent.eventType == ClientEvent.remoteLocation && !arbiter.isLocalClientName(tokenEvent.clientName)){
+                System.out.println("Creating a remote client called "+tokenEvent.clientName);
                 arbiter.createRemoteClient(tokenEvent);
             }
 
@@ -1030,6 +1031,7 @@ public class ClientArbiter {
     }
 
     public void addAllClientLocations(ArrayDeque<GamePacket> queue){
+        System.out.println("Adding locations of all my clients!");
         for (Client c : clientNameMap.values()){
             GamePacket locPacket = new GamePacket();
             locPacket.type = GamePacket.CLIENT_REMOTE_LOC;
