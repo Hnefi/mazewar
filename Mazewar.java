@@ -123,7 +123,7 @@ public class Mazewar extends JFrame {
         /** 
          * The place where all the pieces are put together. 
          */
-        public Mazewar(AddressPortPair dnsLocation, int myPort, int seed) {
+        public Mazewar(AddressPortPair dnsLocation, int myPort) {
                 super("ECE419 Mazewar");
                 consolePrintLn("ECE419 Mazewar started!");
                 // Throw up a dialog to get the GUIClient name.
@@ -135,7 +135,7 @@ public class Mazewar extends JFrame {
                 // You may want to put your network initialization code somewhere in
                 // here.
                 
-                arbiter = new ClientArbiter(name, dnsLocation, myPort, seed); //establish a connection to the server
+                arbiter = new ClientArbiter(name, dnsLocation, myPort); //establish a connection to the server
                 mazeSeed = arbiter.getSeed(); //blocks until the server sends which seed to use
     
                 // Create the maze
@@ -241,16 +241,14 @@ public class Mazewar extends JFrame {
                 String dnsHost = null;
                 int dnsPort = -1;
                 int myPort = -1;
-                int seed = -1;
-                if (args.length == 4){
+                if (args.length == 3){
                     dnsHost = args[0];
                     dnsPort = Integer.parseInt(args[1]);
                     myPort = Integer.parseInt(args[2]);
-                    seed = Integer.parseInt(args[3]);
                     
                     /* Create the GUI */
                     try{
-                        new Mazewar(new AddressPortPair(InetAddress.getByName(dnsHost), dnsPort), myPort, seed);
+                        new Mazewar(new AddressPortPair(InetAddress.getByName(dnsHost), dnsPort), myPort);
                     } catch (java.net.UnknownHostException e){
                         System.out.println("Cannot connect to inet Address "+dnsHost+", message:"+ e.getMessage());
                     }

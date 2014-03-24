@@ -629,8 +629,7 @@ public class ClientArbiter {
     private Maze maze;
     private final int seed;
 
-    public ClientArbiter(String myClientName, AddressPortPair dnsLocation, int myPort, int seedArg){
-        seed = seedArg;
+    public ClientArbiter(String myClientName, AddressPortPair dnsLocation, int myPort){
         maze = null;
 
         clientNameMap = new ConcurrentHashMap<String, Client>();
@@ -672,7 +671,7 @@ public class ClientArbiter {
         } catch (ClassNotFoundException e) {
             System.err.println("ClassNotFoundException when reading response from lookup server: " + e.getMessage());
         }
-
+        seed = packet_w_locations.seed;
 
         /* Parse these locations and pick one as a ring "entry point" */
         AddressPortPair predLocation = null;
