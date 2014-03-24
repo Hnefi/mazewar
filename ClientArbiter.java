@@ -973,6 +973,7 @@ public class ClientArbiter {
     }
 
     public void signalDie(){
+        System.out.println("Thread ID #"+Thread.currentThread().getId()+" signalling arbiter to die");
         dieBuffer.insertToBuf(new ClientQueueObject(null, null, null, null, null, null));
     }
 
@@ -981,6 +982,7 @@ public class ClientArbiter {
         while (diePacket == null){
             diePacket = dieBuffer.takeFromBuf();
         }
+        System.out.println("Thread ID #"+Thread.currentThread().getId()+" received arbiter die signal");
     }
 
     public void createRemoteClient(ClientQueueObject q){
