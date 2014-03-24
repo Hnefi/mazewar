@@ -1034,6 +1034,7 @@ public class ClientArbiter {
             locPacket.player_name = c.getName();
             locPacket.location = new DirectedPoint(c.getPoint(), c.getOrientation());
             locPacket.score = maze.getClientScore(c);
+            System.out.println("Adding location of client "+c.getName()+" and score "+locPacket.score);
             queue.add(locPacket); 
         }
         return queue; 
