@@ -647,9 +647,9 @@ class TokenHandlerThread extends Thread {
             packet_w_status = (GamePacket) from_dns.readObject(); // blocking
 
             System.out.println("Got gamepacket back from dns with type: " + packet_w_status.type);
-
-            location_lookup.type = GamePacket.RING_NOP;
-            to_dns.writeObject(location_lookup); // gracefully close dns connection
+            GamePacket close_pack = new GamePacket();
+            close_pack.type = GamePacket.RING_NOP;
+            to_dns.writeObject(close_pack); // gracefully close dns connection
             System.out.println("Finsihed gracefully closing dns connection");
         }catch (IOException x) {
             System.err.println("Error sending leave request and reading response from player lookup server: " + x.getMessage());
