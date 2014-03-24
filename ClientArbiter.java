@@ -709,6 +709,7 @@ public class ClientArbiter {
 
     //Queue specifically targetting the arbiter for actions, usually during the join protocol
     private final ClientBufferQueue arbiterBuffer;
+    private final ClientBufferQueue dieBuffer;
 
     private final TokenHandlerThread tokenThread;
 
@@ -954,6 +955,17 @@ public class ClientArbiter {
             retPacket = getPacketFromClientQ(fromArb);
         }
         return retPacket;
+    }
+
+    public void signalDie(){
+        dieBuffer.put(new GamePacket());
+    }
+
+    public void waitUntilDieSignal(){
+        GamePacket diePacket = null;
+        while (diePacket == null){
+            diePacket = dieBuffer.take();
+        }
     }
 
     public void createRemoteClient(ClientQueueObject q){

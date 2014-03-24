@@ -18,6 +18,7 @@ public class GamePacket implements Serializable {
     public static final int RING_REPLACE = 3;
     public static final int RING_INVALIDATE = 4;
     public static final int RING_NOP = 5;
+
     // type signalling you are the last one in the ring
     public static final int RING_LAST_PLAYER = 135135;
     
