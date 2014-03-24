@@ -638,7 +638,9 @@ class TokenHandlerThread extends Thread {
         try {
             dns_sock = new Socket(dnsLocation.addr,dnsLocation.port);
             to_dns = new ObjectOutputStream(dns_sock.getOutputStream());
+            to_dns.flush();
             from_dns = new ObjectInputStream(dns_sock.getInputStream());
+            System.out.println("MADE new dns in/out streams in initiateLeaveProtocol()");
         } catch (IOException x) {
             System.err.println("Error opening connection to player lookup server: " + x.getMessage());
         }
@@ -651,6 +653,12 @@ class TokenHandlerThread extends Thread {
             to_dns.writeObject(location_lookup); // send and wait for lookup reply
 
             packet_w_status = (GamePacket) from_dns.readObject(); // blocking
+
+            System.out.println("Got gamepacket back from dns with type: " + packet_w_status.type);
+
+            location_lookup.type = GamePacket.RING_NOP;
+            to_dns.writeObject(location_lookup); // gracefully close dns connection
+            System.out.println("Finsihed gracefully closing dns connection");
         }catch (IOException x) {
             System.err.println("Error sending leave request and reading response from player lookup server: " + x.getMessage());
         } catch (ClassNotFoundException e) {
@@ -662,7 +670,8 @@ class TokenHandlerThread extends Thread {
             interrupt();
             return;
         }
-      
+     
+        System.out.println("Proceed to fixing up connections, we are NOT the last player.");
         Socket sock = null;
         ObjectOutputStream newOut = null;
         ObjectInputStream newIn = null;
