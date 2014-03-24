@@ -373,9 +373,6 @@ class TokenHandlerThread extends Thread {
             }
 
             boolean shouldSendPacketToClient = (tokenEvent.eventType != ClientEvent.nop);
-            if (shouldSendPacketToClient){
-                System.out.println("Handling token event of type "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" for client "+tokenEvent.clientName);
-            }
 
             if ((tokenEvent.eventType == ClientEvent.join || tokenEvent.eventType == ClientEvent.remoteLocation) && !arbiter.isLocalClientName(tokenEvent.clientName)){
                 System.out.println("Creating a remote client called "+tokenEvent.clientName);
@@ -393,7 +390,6 @@ class TokenHandlerThread extends Thread {
             }
 
             if (shouldSendPacketToClient){
-                System.out.println("TokenHandlerThread sending "+ClientArbiter.clientEventAsString(tokenEvent.eventType)+" event to client "+tokenEvent.clientName);
                 toClientQ.insertToBuf(tokenEvent);
             }
 
@@ -401,7 +397,6 @@ class TokenHandlerThread extends Thread {
                 ClientBufferQueue fromClientQ = outBufMap.get(tokenEvent.clientName);
                 ClientQueueObject clientEvent = fromClientQ.takeFromBufNonBlocking();
                 if (clientEvent != null){
-                    System.out.println("Received an event "+ClientArbiter.clientEventAsString(clientEvent.eventType)+" from client "+clientEvent.clientName);
                     toQ = ClientArbiter.getPacketFromClientQ(clientEvent);
                     if (clientEvent.eventType == ClientEvent.leave && !weAreLeaving){
                         pushAllClientsLeaving = true;
