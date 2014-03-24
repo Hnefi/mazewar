@@ -345,7 +345,7 @@ class TokenHandlerThread extends Thread {
         //System.out.println("Thread ID #"+Thread.currentThread().getId()+" processing a token.");
         //if our predecessor is leaving, it tells us where to open the new connection to
         if (token.predecessorReplaceLoc != null){
-            replacePredecessor(token.predecessorReplaceLoc);
+            updatePredecessor(token.predecessorReplaceLoc);
             token.predecessorReplaceLoc = null;
         }
 
@@ -604,10 +604,6 @@ class TokenHandlerThread extends Thread {
         //that machine
         //ALSO IMPORTANT: For every Robot client on this machine, you need to push a "Client is Leaving"
         //event into the Token! 
-    }
-
-    private void replacePredecessor(AddressPortPair newPredLoc){
-        //swap the current predecessor socket with a new one at this location; kill and restart the predThread
     }
 }
 
