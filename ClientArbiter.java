@@ -1179,10 +1179,9 @@ public class ClientArbiter {
     public void removeClient(Client c){
         clientNameMap.remove(c.getName());
         inBufferMap.remove(c.getName());
-        if (!(c instanceOf GUIClient)) {
+        if (!(c instanceof GUIClient)) {
             c.unregisterArbiter();
         }
-        c.unregisterArbiter();
     }
 
     public void registerMaze(Maze m){
