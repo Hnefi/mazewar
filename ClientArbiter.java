@@ -436,17 +436,11 @@ class TokenHandlerThread extends Thread {
         //now pass the token on to our successor
         try {
             //System.out.println("Done everything, trying to write token out the successor stream...");
-            while (successorStreamReady == false) {
-                // block until we get one
-                synchronized (streamToSuccessor) {
-                    try { 
-                        streamToSuccessor.wait();   
-                    } catch (InterruptedException x) {
-                        interrupt();
-                    }
-                }
+            if (streamToSuccessor == null) {
+                fromSocketsBuf.insertToBuf(new IncomingPacketObject(token,null));        
+            } else {
+                streamToSuccessor.writeObject(token);
             }
-            streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
         } 
@@ -511,7 +505,6 @@ class TokenHandlerThread extends Thread {
                 succSocket = socket;
                 streamToSuccessor = to_socket;
                 streamFromSuccessor = from_socket;
-                successorStreamReady = true;
                 
                 System.out.println("We are first to connect, so replacing this successor socket immediately..... Creating blank token and putting it in my queue manually.");
                 /* Now make a new token and put it in our local queue. */
@@ -551,12 +544,6 @@ class TokenHandlerThread extends Thread {
             succSocket = socket;
             streamToSuccessor = to_socket;
             streamFromSuccessor = from_socket;
-            successorStreamReady = true;
-
-            synchronized (streamToSuccessor) {
-                streamToSuccessor.notifyAll(); // wakes any sleeping threads here.
-            }
-
             System.out.println("Replaced all successor sockets and streams, my work here is done......");
         } else if (first_pack.type == GamePacket.RING_INVALIDATE) {
             /* Need to assign all our successor variables to NULL (will cause any tokens getting here to stall)
@@ -566,7 +553,6 @@ class TokenHandlerThread extends Thread {
             succSocket = null;
             streamToSuccessor = null;
             streamFromSuccessor = null;
-            successorStreamReady = false;
             
         } else if (first_pack.type == GamePacket.RING_NOP) {
             // update successor to be this new socket (NEXT TIME)
@@ -976,7 +962,6 @@ public class ClientArbiter {
     }
 
     public void waitUntilDieSignal(){
-        System.out.println("Thread ID #"+Thread.currentThread().getId()+" waiting for arbiter die signal");
         ClientQueueObject diePacket = null;
         while (diePacket == null){
             diePacket = dieBuffer.takeFromBuf();
@@ -1194,9 +1179,10 @@ public class ClientArbiter {
     public void removeClient(Client c){
         clientNameMap.remove(c.getName());
         inBufferMap.remove(c.getName());
-        if (!(c instanceof GUIClient)){
+        if (!(c instanceOf GUIClient)) {
             c.unregisterArbiter();
         }
+        c.unregisterArbiter();
     }
 
     public void registerMaze(Maze m){
