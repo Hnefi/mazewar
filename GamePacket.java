@@ -16,7 +16,8 @@ public class GamePacket implements Serializable {
     public static final int RING_JOIN = 1;
     public static final int RING_LEAVE = 2;
     public static final int RING_REPLACE = 3;
-    public static final int RING_SERVER_PORT = 4; 
+    public static final int RING_CONNECT_TO = 4; 
+    public static final int RING_NOP = 5;
 
     // these go in the event q
     public static final int CLIENT_MOVED_FORWARD = 101;
