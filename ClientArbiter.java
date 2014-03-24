@@ -164,10 +164,10 @@ class PredecessorThread extends Thread {
             }
             assert(tokenFromPred != null);
 
-            System.out.println("PredecessorThread received a token! Putting in the TokenHandlerQueue...");
+            //System.out.println("PredecessorThread received a token! Putting in the TokenHandlerQueue...");
             //Send the token to the TokenHandlerThread
             toHandlerBuf.insertToBuf(new IncomingPacketObject(tokenFromPred, null));
-            System.out.println("Token passed into the TokenHandlerQueue...");
+            //System.out.println("Token passed into the TokenHandlerQueue...");
         }
         try{
             toPred.close();
@@ -320,7 +320,7 @@ class TokenHandlerThread extends Thread {
         //Now wait for something from the queue
         while(!isInterrupted()){
             //System.out.println("Token handler thread going to sleep on the queue.....");
-            System.out.println("TokenHandlerThread checking for actions...");
+            //System.out.println("TokenHandlerThread checking for actions...");
             IncomingPacketObject packet = fromSocketsBuf.takeFromBuf(); //blocks until there's something there
             //System.out.println("Token handler woke up!!! I wonder wat's in the q?!");
             if (packet.token != null){
@@ -342,7 +342,7 @@ class TokenHandlerThread extends Thread {
     }
 
     private void handleToken(Token token){
-        System.out.println("Thread ID #"+Thread.currentThread().getId()+" processing a token.");
+        //System.out.println("Thread ID #"+Thread.currentThread().getId()+" processing a token.");
         //if our predecessor is leaving, it tells us where to open the new connection to
         if (token.predecessorReplaceLoc != null){
             replacePredecessor(token.predecessorReplaceLoc);
@@ -422,12 +422,12 @@ class TokenHandlerThread extends Thread {
 
         //now pass the token on to our successor
         try {
-            System.out.println("Done everything, trying to write token out the successor stream...");
+            //System.out.println("Done everything, trying to write token out the successor stream...");
             streamToSuccessor.writeObject(token);
         } catch (IOException x) {
             System.err.println("Sender couldn't write packet.");
         }
-        System.out.println("Token passed.");
+        //System.out.println("Token passed.");
 
         if (cleanup_join_remnants && !firstToConnect) {
             // update our successor objects to write to. (clear the tmp variables as well)
